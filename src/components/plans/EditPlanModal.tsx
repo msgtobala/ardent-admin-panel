@@ -273,6 +273,26 @@ export function EditPlanModal({
 
           <div className="grid gap-gutter sm:grid-cols-2">
             <TextField
+              id="plan-duration-months"
+              label="Duration (months)"
+              type="number"
+              min={0}
+              value={durationMonths}
+              disabled={isSubmitting}
+              onChange={(event) => setDurationMonths(event.target.value)}
+            />
+            <TextField
+              id="plan-valid-until"
+              label="Valid Until"
+              type="date"
+              value={validUntilDate}
+              disabled={isSubmitting}
+              onChange={(event) => setValidUntilDate(event.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-gutter sm:grid-cols-2">
+            <TextField
               id="plan-original-price"
               label="Original Price"
               type="number"
@@ -294,26 +314,6 @@ export function EditPlanModal({
                 setSellingPrice(event.target.value)
                 if (sellingPriceError) setSellingPriceError(undefined)
               }}
-            />
-          </div>
-
-          <div className="grid gap-gutter sm:grid-cols-2">
-            <TextField
-              id="plan-duration-months"
-              label="Duration (months)"
-              type="number"
-              min={0}
-              value={durationMonths}
-              disabled={isSubmitting}
-              onChange={(event) => setDurationMonths(event.target.value)}
-            />
-            <TextField
-              id="plan-valid-until"
-              label="Valid Until"
-              type="date"
-              value={validUntilDate}
-              disabled={isSubmitting}
-              onChange={(event) => setValidUntilDate(event.target.value)}
             />
           </div>
 
