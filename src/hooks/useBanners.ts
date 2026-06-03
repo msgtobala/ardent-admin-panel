@@ -26,10 +26,9 @@ export function useBanners() {
 
   const hasPrevious = pageIndex > 0
 
-  const showingFrom =
-    totalCount === 0 || banners.length === 0
-      ? 0
-      : pageIndex * BANNERS_PAGE_SIZE + 1
+  const currentPage = pageIndex + 1
+  const totalPages =
+    totalCount === 0 ? 1 : Math.ceil(totalCount / BANNERS_PAGE_SIZE)
 
   const loadPage = useCallback(
     async (cursor: QueryDocumentSnapshot<DocumentData> | null) => {
@@ -128,8 +127,8 @@ export function useBanners() {
 
   return {
     banners,
-    totalCount,
-    showingFrom,
+    currentPage,
+    totalPages,
     isLoading,
     error,
     toggleError,

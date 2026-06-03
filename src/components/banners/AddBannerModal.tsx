@@ -90,10 +90,7 @@ export function AddBannerModal({
     let valid = true
     const trimmedLink = link.trim()
 
-    if (!trimmedLink) {
-      setLinkError('Banner URL is required')
-      valid = false
-    } else if (!URL_PATTERN.test(trimmedLink)) {
+    if (trimmedLink && !URL_PATTERN.test(trimmedLink)) {
       setLinkError('Enter a valid URL starting with http:// or https://')
       valid = false
     } else {
@@ -219,7 +216,7 @@ export function AddBannerModal({
         >
           <div className="flex w-full flex-col gap-1">
             <label htmlFor="banner-link" className="text-label-sm text-on-surface">
-              Banner URL Link
+              Banner URL Link <span className="font-normal text-on-surface-variant">(optional)</span>
             </label>
             <div className="relative">
               <MaterialIcon
@@ -229,7 +226,9 @@ export function AddBannerModal({
               />
               <input
                 id="banner-link"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
                 placeholder="https://ardentmds.com/campaign/..."
                 value={link}
                 disabled={isSubmitting}

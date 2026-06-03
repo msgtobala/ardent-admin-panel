@@ -14,8 +14,8 @@ export default function BannersPage() {
   const [modalState, setModalState] = useState<BannerModalState>(null)
   const {
     banners,
-    totalCount,
-    showingFrom,
+    currentPage,
+    totalPages,
     isLoading,
     error,
     toggleError,
@@ -52,8 +52,8 @@ export default function BannersPage() {
       <BannersPageHeader onNewBanner={handleNewBanner} />
       <BannersTable
         banners={banners}
-        totalCount={totalCount}
-        showingFrom={showingFrom}
+        currentPage={currentPage}
+        totalPages={totalPages}
         isLoading={isLoading}
         error={error}
         toggleError={toggleError}

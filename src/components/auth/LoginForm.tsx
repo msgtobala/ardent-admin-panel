@@ -82,7 +82,7 @@ export function LoginForm() {
         label="Email Address"
         type="email"
         name="email"
-        placeholder="example@ardent.com"
+        placeholder="email@ardent.com"
         autoComplete="email"
         value={email}
         disabled={isSubmitting}

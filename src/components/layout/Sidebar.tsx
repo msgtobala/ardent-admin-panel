@@ -19,7 +19,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-svh w-sidebar-width shrink-0 flex-col border-r border-border-subtle bg-surface-white py-gutter shadow-tier-1">
+    <aside className="flex h-full w-sidebar-width shrink-0 flex-col border-r border-border-subtle bg-surface-white py-gutter shadow-tier-1">
       <div className="mb-8 px-gutter">
         <div className="flex items-center gap-3">
           <img
@@ -43,7 +43,7 @@ export function Sidebar() {
             to={item.path}
             className={({ isActive }) =>
               [
-                'flex items-center gap-3 border-l-4 py-3 pl-7 pr-gutter text-body-md transition',
+                'flex items-center gap-3 border-l-4 py-3 pl-7 pr-gutter text-body-md font-semibold transition',
                 isActive
                   ? 'border-primary-action bg-surface text-primary-action'
                   : 'border-transparent text-on-surface-variant hover:bg-row-hover',

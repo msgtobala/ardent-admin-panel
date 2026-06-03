@@ -26,7 +26,7 @@ export function Button({
     <button
       type={type}
       className={[
-        'inline-flex h-[34px] cursor-pointer items-center justify-center rounded-input px-[17px] text-label-sm font-medium transition',
+        'inline-flex h-[34px] cursor-pointer items-center justify-center rounded-button px-[17px] text-label-sm font-medium transition',
         variantClasses[variant],
         fullWidth ? 'w-full' : '',
         className,

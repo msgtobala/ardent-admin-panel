@@ -125,6 +125,7 @@
 
   /* Radius */
   --radius-input: 6px;
+  --radius-button: 10px;
   --radius-sm: 0.25rem;
   --radius: 0.5rem;
   --radius-md: 0.75rem;

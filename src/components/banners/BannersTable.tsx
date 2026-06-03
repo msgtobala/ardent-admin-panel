@@ -10,8 +10,8 @@ import { StatusBadge } from './StatusBadge'
 
 interface BannersTableProps {
   banners: Banner[]
-  totalCount: number
-  showingFrom: number
+  currentPage: number
+  totalPages: number
   isLoading: boolean
   error?: string
   toggleError?: string
@@ -45,8 +45,8 @@ function TableSkeleton() {
 
 export function BannersTable({
   banners,
-  totalCount,
-  showingFrom,
+  currentPage,
+  totalPages,
   isLoading,
   error,
   toggleError,
@@ -166,7 +166,7 @@ export function BannersTable({
                           target="_blank"
                           rel="noopener noreferrer"
                           title={banner.link}
-                          className="block truncate text-body-md text-text-black transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                          className="block truncate text-body-md text-primary transition hover:text-primary-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                         >
                           {banner.link}
                         </a>
@@ -237,7 +237,7 @@ export function BannersTable({
           <p className="text-body-md text-on-surface-variant">
             {isLoading
               ? 'Loading banners...'
-              : `Showing ${showingFrom} of ${totalCount} banners`}
+              : `Page ${currentPage} of ${totalPages}`}
           </p>
           <div className="flex gap-2">
             <button
