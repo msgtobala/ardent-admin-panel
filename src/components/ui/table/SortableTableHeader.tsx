@@ -1,23 +1,24 @@
-import type { BannerSortField, SortDirection } from '../../types/banner'
-import { MaterialIcon } from '../ui/MaterialIcon'
+import type { SortDirection } from '@/types/table'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { TableHeadCell } from './Table'
 
-interface SortableTableHeaderProps {
+interface SortableTableHeaderProps<TField extends string> {
   label: string
-  field: BannerSortField
-  sortField: BannerSortField
+  field: TField
+  sortField: TField
   sortDirection: SortDirection
-  onSort: (field: BannerSortField) => void
+  onSort: (field: TField) => void
   align?: 'left' | 'center'
 }
 
-export function SortableTableHeader({
+export function SortableTableHeader<TField extends string>({
   label,
   field,
   sortField,
   sortDirection,
   onSort,
   align = 'left',
-}: SortableTableHeaderProps) {
+}: SortableTableHeaderProps<TField>) {
   const isActive = sortField === field
   const ariaSort = isActive
     ? sortDirection === 'asc'
@@ -26,21 +27,16 @@ export function SortableTableHeader({
     : 'none'
 
   return (
-    <th
-      scope="col"
-      aria-sort={ariaSort}
-      className={[
-        'px-gutter py-4 text-label-sm font-semibold text-text-black',
-        align === 'center' ? 'text-center' : 'text-left',
-      ].join(' ')}
-    >
+    <TableHeadCell align={align} aria-sort={ariaSort}>
       <button
         type="button"
         onClick={() => onSort(field)}
         className={[
           'inline-flex cursor-pointer items-center gap-1 text-text-black transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
           align === 'center' ? 'mx-auto' : '',
-        ].join(' ')}
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
         {label}
         <MaterialIcon
@@ -55,6 +51,6 @@ export function SortableTableHeader({
           className={isActive ? 'text-primary-action' : 'text-outline'}
         />
       </button>
-    </th>
+    </TableHeadCell>
   )
 }

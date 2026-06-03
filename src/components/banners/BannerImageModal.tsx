@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { MaterialIcon } from '../ui/MaterialIcon'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface BannerImageModalProps {
   imageUrl: string

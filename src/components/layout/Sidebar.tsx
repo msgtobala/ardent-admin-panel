@@ -1,10 +1,10 @@
 import { signOut } from 'firebase/auth'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import ardentLogo from '../../assets/ardent-logo.png'
-import { NAV_ITEMS } from '../../config/navigation'
-import { auth } from '../../lib/firebase'
-import { MaterialIcon } from '../ui/MaterialIcon'
+import ardentLogo from '@/assets/ardent-logo.png'
+import { NAV_ITEMS } from '@/config/navigation'
+import { auth } from '@/lib/firebase'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 export function Sidebar() {
   const [isSigningOut, setIsSigningOut] = useState(false)

@@ -16,16 +16,22 @@ export const NAV_ITEMS: NavItem[] = [
     breadcrumbs: { parent: 'Dashboard', current: 'Overview' },
   },
   {
-    label: 'Users',
-    path: '/users',
-    icon: 'group',
-    breadcrumbs: { parent: 'Users', current: 'Overview' },
-  },
-  {
     label: 'Banners',
     path: '/banners',
     icon: 'panorama',
     breadcrumbs: { parent: 'Banners', current: 'Overview' },
+  },
+  {
+    label: 'Faculties',
+    path: '/faculties',
+    icon: 'school',
+    breadcrumbs: { parent: 'Faculties', current: 'Overview' },
+  },
+  {
+    label: 'Users',
+    path: '/users',
+    icon: 'group',
+    breadcrumbs: { parent: 'Users', current: 'Overview' },
   },
   {
     label: 'Grand Tests',

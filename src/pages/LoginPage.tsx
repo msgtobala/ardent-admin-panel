@@ -1,5 +1,5 @@
-import ardentLogo from '../assets/ardent-logo.png'
-import { LoginForm } from '../components/auth/LoginForm'
+import ardentLogo from '@/assets/ardent-logo.png'
+import { LoginForm } from '@/components/auth/LoginForm'
 
 export default function LoginPage() {
   return (

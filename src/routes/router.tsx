@@ -1,14 +1,15 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { GuestRoute } from '../components/auth/GuestRoute'
-import { ProtectedRoute } from '../components/auth/ProtectedRoute'
-import { AppLayout } from '../components/layout/AppLayout'
-import BannersPage from '../pages/BannersPage'
-import DashboardPage from '../pages/DashboardPage'
-import GrandTestsPage from '../pages/GrandTestsPage'
-import LoginPage from '../pages/LoginPage'
-import QBanksPage from '../pages/QBanksPage'
-import ThreeMinChallengesPage from '../pages/ThreeMinChallengesPage'
-import UsersPage from '../pages/UsersPage'
+import { GuestRoute } from '@/components/auth/GuestRoute'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+import BannersPage from '@/pages/BannersPage'
+import DashboardPage from '@/pages/DashboardPage'
+import FacultiesPage from '@/pages/FacultiesPage'
+import GrandTestsPage from '@/pages/GrandTestsPage'
+import LoginPage from '@/pages/LoginPage'
+import QBanksPage from '@/pages/QBanksPage'
+import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
+import UsersPage from '@/pages/UsersPage'
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +39,10 @@ export const router = createBrowserRouter([
       {
         path: 'users',
         element: <UsersPage />,
+      },
+      {
+        path: 'faculties',
+        element: <FacultiesPage />,
       },
       {
         path: 'banners',

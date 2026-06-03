@@ -1,11 +1,11 @@
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { checkIsAdmin, mapAuthError } from '../../lib/auth-claims'
-import { auth } from '../../lib/firebase'
-import { Button } from '../ui/Button'
-import { PasswordField } from '../ui/PasswordField'
-import { TextField } from '../ui/TextField'
+import { checkIsAdmin, mapAuthError } from '@/lib/auth-claims'
+import { auth } from '@/lib/firebase'
+import { Button } from '@/components/ui/Button'
+import { PasswordField } from '@/components/ui/PasswordField'
+import { TextField } from '@/components/ui/TextField'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

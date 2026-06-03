@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
-import { getBreadcrumbs, getNavItemByPath } from '../../config/navigation'
-import { useAuth } from '../../contexts/AuthContext'
-import { MaterialIcon } from '../ui/MaterialIcon'
+import { getBreadcrumbs, getNavItemByPath } from '@/config/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 function getDisplayName(
   displayName: string | null | undefined,

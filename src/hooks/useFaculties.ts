@@ -1,15 +1,15 @@
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
 import {
-  BANNERS_PAGE_SIZE,
-  fetchBannersPage,
-  getBannersCount,
-  updateBannerIsActive,
-} from '@/lib/banners'
-import type { Banner, BannerSortField, SortDirection } from '@/types/banner'
+  FACULTIES_PAGE_SIZE,
+  deleteFaculty,
+  fetchFacultiesPage,
+  getFacultiesCount,
+} from '@/lib/faculties'
+import type { Faculty, FacultySortField, SortDirection } from '@/types/faculty'
 
-export function useBanners() {
-  const [banners, setBanners] = useState<Banner[]>([])
+export function useFaculties() {
+  const [faculties, setFaculties] = useState<Faculty[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
@@ -20,15 +20,15 @@ export function useBanners() {
   const [hasNext, setHasNext] = useState(false)
   const [lastDocOnPage, setLastDocOnPage] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
-  const [toggleError, setToggleError] = useState<string | undefined>()
-  const [sortField, setSortField] = useState<BannerSortField>('createdAt')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [sortField, setSortField] = useState<FacultySortField>('displayName')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [actionError, setActionError] = useState<string | undefined>()
 
   const hasPrevious = pageIndex > 0
 
   const currentPage = pageIndex + 1
   const totalPages =
-    totalCount === 0 ? 1 : Math.ceil(totalCount / BANNERS_PAGE_SIZE)
+    totalCount === 0 ? 1 : Math.ceil(totalCount / FACULTIES_PAGE_SIZE)
 
   const loadPage = useCallback(
     async (cursor: QueryDocumentSnapshot<DocumentData> | null) => {
@@ -38,21 +38,21 @@ export function useBanners() {
       try {
         const shouldFetchCount = cursor === null
         const [pageResult, count] = await Promise.all([
-          fetchBannersPage({
-            pageSize: BANNERS_PAGE_SIZE,
+          fetchFacultiesPage({
+            pageSize: FACULTIES_PAGE_SIZE,
             lastDoc: cursor,
             sortField,
             sortDirection,
           }),
-          shouldFetchCount ? getBannersCount() : Promise.resolve(undefined),
+          shouldFetchCount ? getFacultiesCount() : Promise.resolve(undefined),
         ])
 
-        setBanners(pageResult.banners)
+        setFaculties(pageResult.faculties)
         if (count !== undefined) setTotalCount(count)
         setHasNext(pageResult.hasMore)
         setLastDocOnPage(pageResult.lastDoc)
       } catch {
-        setError('Failed to load banners. Please try again.')
+        setError('Failed to load faculties. Please try again.')
       } finally {
         setIsLoading(false)
       }
@@ -65,8 +65,8 @@ export function useBanners() {
   }, [pageIndex, pageCursors, loadPage])
 
   const handleSort = useCallback(
-    (field: BannerSortField) => {
-      setBanners([])
+    (field: FacultySortField) => {
+      setFaculties([])
       setPageIndex(0)
       setPageCursors([null])
 
@@ -76,7 +76,7 @@ export function useBanners() {
       }
 
       setSortField(field)
-      setSortDirection(field === 'createdAt' ? 'desc' : 'asc')
+      setSortDirection('asc')
     },
     [sortField],
   )
@@ -101,44 +101,37 @@ export function useBanners() {
     loadPage(pageCursors[pageIndex] ?? null)
   }, [loadPage, pageCursors, pageIndex])
 
-  const refreshBanners = useCallback(() => {
+  const refreshFaculties = useCallback(() => {
     setPageIndex(0)
     setPageCursors([null])
   }, [])
 
-  const handleToggleIsActive = useCallback(
-    async (id: string, isActive: boolean) => {
-      setToggleError(undefined)
-      const previousBanners = banners
-
-      setBanners((prev) =>
-        prev.map((banner) =>
-          banner.id === id ? { ...banner, isActive } : banner,
-        ),
-      )
-
+  const handleDelete = useCallback(
+    async (id: string) => {
+      setActionError(undefined)
       try {
-        await updateBannerIsActive(id, isActive)
+        await deleteFaculty(id)
+        refreshFaculties()
       } catch {
-        setBanners(previousBanners)
-        setToggleError('Failed to update banner status. Please try again.')
+        setActionError('Failed to delete faculty. Please try again.')
+        throw new Error('Failed to delete faculty')
       }
     },
-    [banners],
+    [refreshFaculties],
   )
 
-  const isInitialLoading = isLoading && banners.length === 0
-  const isPageLoading = isLoading && banners.length > 0
+  const isInitialLoading = isLoading && faculties.length === 0
+  const isPageLoading = isLoading && faculties.length > 0
 
   return {
-    banners,
+    faculties,
     currentPage,
     totalPages,
     isLoading,
     isInitialLoading,
     isPageLoading,
     error,
-    toggleError,
+    actionError,
     hasNext,
     hasPrevious,
     sortField,
@@ -147,7 +140,7 @@ export function useBanners() {
     handleNext,
     handlePrevious,
     handleRetry,
-    handleToggleIsActive,
-    refreshBanners,
+    handleDelete,
+    refreshFaculties,
   }
 }

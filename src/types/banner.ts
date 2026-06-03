@@ -20,4 +20,4 @@ export interface BannerDocument {
 
 export type BannerSortField = 'link' | 'isActive' | 'createdAt'
 
-export type SortDirection = 'asc' | 'desc'
+export type { SortDirection } from '@/types/table'

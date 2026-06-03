@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react'
-import { validateBannerImageFile } from '../../lib/banner-storage'
-import { MaterialIcon } from '../ui/MaterialIcon'
+import { validateBannerImageFile } from '@/lib/banner-storage'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface BannerImageUploadProps {
   file: File | null

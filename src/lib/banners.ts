@@ -18,7 +18,7 @@ import type {
   BannerDocument,
   BannerSortField,
   SortDirection,
-} from '../types/banner'
+} from '@/types/banner'
 import { db } from './firebase'
 
 /**

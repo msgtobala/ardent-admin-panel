@@ -7,8 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { checkIsAdmin } from '../lib/auth-claims'
-import { auth } from '../lib/firebase'
+import { checkIsAdmin } from '@/lib/auth-claims'
+import { auth } from '@/lib/firebase'
 
 interface AuthContextValue {
   user: User | null

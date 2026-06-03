@@ -14,15 +14,23 @@ export function TextField({
   id,
   error,
   className = '',
+  required,
   ...inputProps
 }: TextFieldProps) {
   return (
     <div className="flex w-full flex-col gap-1">
       <label htmlFor={id} className="text-label-sm text-on-surface">
         {label}
+        {required ? (
+          <span className="text-error-red" aria-hidden="true">
+            {' '}
+            *
+          </span>
+        ) : null}
       </label>
       <input
         id={id}
+        required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
         className={[inputClasses, error ? 'border-error-red' : '', className]

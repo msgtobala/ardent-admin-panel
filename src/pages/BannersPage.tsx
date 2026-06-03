@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { AddBannerModal } from '../components/banners/AddBannerModal'
-import { BannersPageHeader } from '../components/banners/BannersPageHeader'
-import { BannersTable } from '../components/banners/BannersTable'
-import { useBanners } from '../hooks/useBanners'
-import type { Banner } from '../types/banner'
+import { AddBannerModal } from '@/components/banners/AddBannerModal'
+import { BannersPageHeader } from '@/components/banners/BannersPageHeader'
+import { BannersTable } from '@/components/banners/BannersTable'
+import { useBanners } from '@/hooks/useBanners'
+import type { Banner } from '@/types/banner'
 
 type BannerModalState =
   | { mode: 'add' }
@@ -17,6 +17,8 @@ export default function BannersPage() {
     currentPage,
     totalPages,
     isLoading,
+    isInitialLoading,
+    isPageLoading,
     error,
     toggleError,
     hasNext,
@@ -55,6 +57,8 @@ export default function BannersPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         isLoading={isLoading}
+        isInitialLoading={isInitialLoading}
+        isPageLoading={isPageLoading}
         error={error}
         toggleError={toggleError}
         hasNext={hasNext}

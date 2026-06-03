@@ -1,4 +1,4 @@
-import { CircularLoader } from '../ui/CircularLoader'
+import { CircularLoader } from '@/components/ui/CircularLoader'
 
 export function AuthLoadingScreen() {
   return (
