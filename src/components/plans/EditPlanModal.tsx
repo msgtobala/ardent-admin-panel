@@ -5,7 +5,16 @@ import {
   normalizePlanType,
   type FirestorePlanType,
 } from '@/config/plan-sections'
-import { fromDateInputValue, toDateInputValue } from '@/lib/format-date'
+import {
+  applyModuleTimingModeChange,
+  applyPlanTypeChangeToFields,
+  getPlanTypeFieldRules,
+  inferModulePlanTimingMode,
+  normalizePlanTypeFieldsForSave,
+  validatePlanTypeFields,
+  type ModulePlanTimingMode,
+} from '@/lib/plan-type-fields'
+import { toDateInputValue } from '@/lib/format-date'
 import {
   createPlan,
   getNextDisplayOrder,
@@ -22,6 +31,7 @@ import {
   PlanDescriptionList,
   normalizePlanDescriptions,
 } from './PlanDescriptionList'
+import { ModulePlanTimingSection } from './ModulePlanTimingSection'
 
 interface EditPlanModalProps {
   isOpen: boolean
@@ -31,16 +41,38 @@ interface EditPlanModalProps {
 }
 
 function getInitialFormState(plan: Plan | null) {
+  const planType = (plan?.planType ?? 'DURATION_BASED') as FirestorePlanType
+  const moduleTimingMode =
+    planType === 'MODULE_BASED'
+      ? inferModulePlanTimingMode(
+          plan?.durationMonths ?? 0,
+          plan?.validUntilDate ?? null,
+        )
+      : 'duration'
+
+  const normalizedFields = normalizePlanTypeFieldsForSave(
+    planType,
+    plan?.durationMonths?.toString() ?? '',
+    toDateInputValue(plan?.validUntilDate ?? null),
+    moduleTimingMode,
+  )
+
   return {
     planName: plan?.planName ?? '',
-    planType: (plan?.planType ?? 'DURATION_BASED') as FirestorePlanType,
+    planType,
     originalPrice: plan?.originalPrice?.toString() ?? '',
     sellingPrice: plan?.sellingPrice?.toString() ?? '',
-    durationMonths: plan?.durationMonths?.toString() ?? '',
+    durationMonths:
+      normalizedFields.durationMonths > 0
+        ? normalizedFields.durationMonths.toString()
+        : planType === 'DATE_BASED'
+          ? '0'
+          : '',
     planModules: normalizePlanModules(plan?.planModules ?? []),
     descriptions: plan?.description?.length ? [...plan.description] : [],
     badge: plan?.badge ?? '',
-    validUntilDate: toDateInputValue(plan?.validUntilDate ?? null),
+    validUntilDate: toDateInputValue(normalizedFields.validUntilDate),
+    moduleTimingMode,
     isActive: plan?.isActive ?? true,
   }
 }
@@ -60,14 +92,20 @@ export function EditPlanModal({
   const [descriptions, setDescriptions] = useState<string[]>([])
   const [badge, setBadge] = useState('')
   const [validUntilDate, setValidUntilDate] = useState('')
+  const [moduleTimingMode, setModuleTimingMode] = useState<ModulePlanTimingMode>('duration')
   const [isActive, setIsActive] = useState(true)
   const [planNameError, setPlanNameError] = useState<string | undefined>()
   const [planTypeError, setPlanTypeError] = useState<string | undefined>()
   const [sellingPriceError, setSellingPriceError] = useState<string | undefined>()
+  const [durationMonthsError, setDurationMonthsError] = useState<string | undefined>()
+  const [validUntilDateError, setValidUntilDateError] = useState<string | undefined>()
+  const [timingModeError, setTimingModeError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isEditMode = plan != null
+  const normalizedPlanType = normalizePlanType(planType) as FirestorePlanType
+  const fieldRules = getPlanTypeFieldRules(normalizedPlanType, moduleTimingMode)
 
   useEffect(() => {
     if (!isOpen) return
@@ -82,10 +120,14 @@ export function EditPlanModal({
     setDescriptions(initial.descriptions)
     setBadge(initial.badge)
     setValidUntilDate(initial.validUntilDate)
+    setModuleTimingMode(initial.moduleTimingMode)
     setIsActive(initial.isActive)
     setPlanNameError(undefined)
     setPlanTypeError(undefined)
     setSellingPriceError(undefined)
+    setDurationMonthsError(undefined)
+    setValidUntilDateError(undefined)
+    setTimingModeError(undefined)
     setFormError(undefined)
     setIsSubmitting(false)
   }, [isOpen, plan])
@@ -145,7 +187,68 @@ export function EditPlanModal({
       setSellingPriceError(undefined)
     }
 
+    const timingValidation = validatePlanTypeFields(
+      normalizedPlanType,
+      durationMonths,
+      validUntilDate,
+      moduleTimingMode,
+    )
+
+    if (timingValidation.durationMonthsError) {
+      setDurationMonthsError(timingValidation.durationMonthsError)
+      valid = false
+    } else {
+      setDurationMonthsError(undefined)
+    }
+
+    if (timingValidation.validUntilDateError) {
+      setValidUntilDateError(timingValidation.validUntilDateError)
+      valid = false
+    } else {
+      setValidUntilDateError(undefined)
+    }
+
+    if (timingValidation.timingModeError) {
+      setTimingModeError(timingValidation.timingModeError)
+      valid = false
+    } else {
+      setTimingModeError(undefined)
+    }
+
     return valid
+  }
+
+  function handlePlanTypeChange(nextPlanType: string) {
+    const normalizedNextPlanType = normalizePlanType(nextPlanType) as FirestorePlanType
+    setPlanType(normalizedNextPlanType)
+    if (planTypeError) setPlanTypeError(undefined)
+
+    const defaults = applyPlanTypeChangeToFields(
+      normalizedNextPlanType,
+      durationMonths,
+      validUntilDate,
+    )
+    setDurationMonths(defaults.durationMonths)
+    setValidUntilDate(defaults.validUntilDate)
+    setModuleTimingMode(defaults.moduleTimingMode)
+    setDurationMonthsError(undefined)
+    setValidUntilDateError(undefined)
+    setTimingModeError(undefined)
+  }
+
+  function handleModuleTimingModeChange(nextMode: ModulePlanTimingMode) {
+    setModuleTimingMode(nextMode)
+
+    const nextFields = applyModuleTimingModeChange(
+      nextMode,
+      durationMonths,
+      validUntilDate,
+    )
+    setDurationMonths(nextFields.durationMonths)
+    setValidUntilDate(nextFields.validUntilDate)
+    setDurationMonthsError(undefined)
+    setValidUntilDateError(undefined)
+    setTimingModeError(undefined)
   }
 
   async function handleSave() {
@@ -154,17 +257,25 @@ export function EditPlanModal({
     setFormError(undefined)
     setIsSubmitting(true)
 
-    const normalizedPlanType = normalizePlanType(planType) as FirestorePlanType
+    const normalizedPlanTypeForSave = normalizePlanType(planType) as FirestorePlanType
+    const { durationMonths: savedDurationMonths, validUntilDate: savedValidUntilDate } =
+      normalizePlanTypeFieldsForSave(
+        normalizedPlanTypeForSave,
+        durationMonths,
+        validUntilDate,
+        moduleTimingMode,
+      )
+
     const payload = {
       planName: planName.trim(),
-      planType: normalizedPlanType,
+      planType: normalizedPlanTypeForSave,
       originalPrice: parseNumber(originalPrice),
       sellingPrice: parseNumber(sellingPrice),
-      durationMonths: Math.max(0, Math.round(parseNumber(durationMonths))),
+      durationMonths: savedDurationMonths,
       description: normalizePlanDescriptions(descriptions),
       planModules,
       badge: badge.trim(),
-      validUntilDate: fromDateInputValue(validUntilDate),
+      validUntilDate: savedValidUntilDate,
       isActive,
     }
 
@@ -172,7 +283,7 @@ export function EditPlanModal({
       if (isEditMode && plan) {
         await updatePlan(plan.id, payload)
       } else {
-        const displayOrder = await getNextDisplayOrder(normalizedPlanType)
+        const displayOrder = await getNextDisplayOrder(normalizedPlanTypeForSave)
         await createPlan({
           ...payload,
           displayOrder,
@@ -265,31 +376,84 @@ export function EditPlanModal({
               value: section.planType,
               label: section.title,
             }))}
-            onChange={(nextPlanType) => {
-              setPlanType(nextPlanType as FirestorePlanType)
-              if (planTypeError) setPlanTypeError(undefined)
-            }}
+            onChange={handlePlanTypeChange}
           />
 
-          <div className="grid gap-gutter sm:grid-cols-2">
-            <TextField
-              id="plan-duration-months"
-              label="Duration (months)"
-              type="number"
-              min={0}
-              value={durationMonths}
+          {fieldRules.sectionHelperText ? (
+            <p className="text-body-md text-on-surface-variant">{fieldRules.sectionHelperText}</p>
+          ) : null}
+
+          {fieldRules.showModuleTimingMode ? (
+            <ModulePlanTimingSection
+              timingMode={moduleTimingMode}
+              durationMonths={durationMonths}
+              validUntilDate={validUntilDate}
               disabled={isSubmitting}
-              onChange={(event) => setDurationMonths(event.target.value)}
+              durationMonthsError={durationMonthsError}
+              validUntilDateError={validUntilDateError}
+              timingModeError={timingModeError}
+              durationHelperText={fieldRules.durationHelperText}
+              validUntilHelperText={fieldRules.validUntilHelperText}
+              onTimingModeChange={handleModuleTimingModeChange}
+              onDurationMonthsChange={(value) => {
+                setDurationMonths(value)
+                if (durationMonthsError) setDurationMonthsError(undefined)
+                if (timingModeError) setTimingModeError(undefined)
+              }}
+              onValidUntilDateChange={(value) => {
+                setValidUntilDate(value)
+                if (validUntilDateError) setValidUntilDateError(undefined)
+                if (timingModeError) setTimingModeError(undefined)
+              }}
             />
-            <TextField
-              id="plan-valid-until"
-              label="Valid Until"
-              type="date"
-              value={validUntilDate}
-              disabled={isSubmitting}
-              onChange={(event) => setValidUntilDate(event.target.value)}
-            />
-          </div>
+          ) : null}
+
+          {fieldRules.showDurationMonths && !fieldRules.showModuleTimingMode ? (
+            <div className="flex flex-col gap-1">
+              <TextField
+                id="plan-duration-months"
+                label="Duration (months)"
+                type="number"
+                min={1}
+                value={durationMonths}
+                disabled={isSubmitting}
+                required
+                error={durationMonthsError}
+                onChange={(event) => {
+                  setDurationMonths(event.target.value)
+                  if (durationMonthsError) setDurationMonthsError(undefined)
+                }}
+              />
+              {fieldRules.durationHelperText ? (
+                <p className="text-label-sm text-on-surface-variant">
+                  {fieldRules.durationHelperText}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {fieldRules.showValidUntilDate && !fieldRules.showModuleTimingMode ? (
+            <div className="flex flex-col gap-1">
+              <TextField
+                id="plan-valid-until"
+                label="Valid Until"
+                type="date"
+                value={validUntilDate}
+                disabled={isSubmitting}
+                required
+                error={validUntilDateError}
+                onChange={(event) => {
+                  setValidUntilDate(event.target.value)
+                  if (validUntilDateError) setValidUntilDateError(undefined)
+                }}
+              />
+              {fieldRules.validUntilHelperText ? (
+                <p className="text-label-sm text-on-surface-variant">
+                  {fieldRules.validUntilHelperText}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="grid gap-gutter sm:grid-cols-2">
             <TextField

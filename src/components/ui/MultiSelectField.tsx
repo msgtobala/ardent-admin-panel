@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { SelectOption } from '@/components/ui/SelectField'
 
@@ -46,28 +45,12 @@ export function MultiSelectField({
 }: MultiSelectFieldProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
-  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number } | null>(
-    null,
-  )
   const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
   const listboxRef = useRef<HTMLUListElement>(null)
   const listboxId = `${id}-listbox`
 
   const selectedSet = useMemo(() => new Set(values), [values])
   const displayLabel = getDisplayLabel(values, options, placeholder)
-
-  const updateMenuPosition = useCallback(() => {
-    const trigger = triggerRef.current
-    if (!trigger) return
-
-    const rect = trigger.getBoundingClientRect()
-    setMenuStyle({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-    })
-  }, [])
 
   const handleClose = useCallback(() => {
     setIsOpen(false)
@@ -76,10 +59,9 @@ export function MultiSelectField({
 
   const handleOpen = useCallback(() => {
     if (disabled) return
-    updateMenuPosition()
     setIsOpen(true)
     setHighlightedIndex(0)
-  }, [disabled, updateMenuPosition])
+  }, [disabled])
 
   const handleToggleValue = useCallback(
     (optionValue: string) => {
@@ -96,37 +78,50 @@ export function MultiSelectField({
   useEffect(() => {
     if (!isOpen) return
 
-    updateMenuPosition()
-
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node
       if (containerRef.current?.contains(target)) return
-      if (listboxRef.current?.contains(target)) return
       handleClose()
     }
 
-    function handleScrollOrResize() {
-      updateMenuPosition()
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === 'Escape') handleClose()
     }
 
     document.addEventListener('mousedown', handlePointerDown)
-    window.addEventListener('resize', handleScrollOrResize)
-    window.addEventListener('scroll', handleScrollOrResize, true)
+    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
-      window.removeEventListener('resize', handleScrollOrResize)
-      window.removeEventListener('scroll', handleScrollOrResize, true)
+      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [handleClose, isOpen, updateMenuPosition])
+  }, [handleClose, isOpen])
 
   useEffect(() => {
     if (!isOpen || highlightedIndex < 0) return
-    const option = listboxRef.current?.children[highlightedIndex] as HTMLElement | undefined
-    option?.scrollIntoView({ block: 'nearest' })
+
+    const listbox = listboxRef.current
+    if (!listbox) return
+
+    const option = listbox.children[highlightedIndex] as HTMLElement | undefined
+    if (!option) return
+
+    const optionTop = option.offsetTop
+    const optionBottom = optionTop + option.offsetHeight
+    const visibleTop = listbox.scrollTop
+    const visibleBottom = visibleTop + listbox.clientHeight
+
+    if (optionTop < visibleTop) {
+      listbox.scrollTop = optionTop
+      return
+    }
+
+    if (optionBottom > visibleBottom) {
+      listbox.scrollTop = optionBottom - listbox.clientHeight
+    }
   }, [highlightedIndex, isOpen])
 
-  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+  function handleTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
     if (disabled) return
 
     if (event.key === 'ArrowDown') {
@@ -177,46 +172,102 @@ export function MultiSelectField({
           </span>
         ) : null}
       </label>
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        role="combobox"
-        aria-controls={listboxId}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        disabled={disabled}
-        onClick={() => (isOpen ? handleClose() : handleOpen())}
-        onKeyDown={handleTriggerKeyDown}
-        className={[
-          triggerClasses,
-          error ? 'border-error-red' : '',
-          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        <span
+
+      <div className="relative w-full">
+        <button
+          id={id}
+          type="button"
+          role="combobox"
+          aria-controls={listboxId}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+          disabled={disabled}
+          onClick={() => (isOpen ? handleClose() : handleOpen())}
+          onKeyDown={handleTriggerKeyDown}
           className={[
-            'line-clamp-2 flex-1',
-            values.length > 0 ? 'text-on-surface' : 'text-on-surface-variant',
-          ].join(' ')}
-        >
-          {displayLabel}
-        </span>
-        <MaterialIcon
-          name="expand_more"
-          size={20}
-          className={[
-            'shrink-0 text-on-surface-variant transition-transform duration-200',
-            isOpen ? 'rotate-180' : '',
+            triggerClasses,
+            error ? 'border-error-red' : '',
+            disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           ]
             .filter(Boolean)
             .join(' ')}
-        />
-      </button>
+        >
+          <span
+            className={[
+              'line-clamp-2 flex-1',
+              values.length > 0 ? 'text-on-surface' : 'text-on-surface-variant',
+            ].join(' ')}
+          >
+            {displayLabel}
+          </span>
+          <MaterialIcon
+            name="expand_more"
+            size={20}
+            className={[
+              'shrink-0 text-on-surface-variant transition-transform duration-200',
+              isOpen ? 'rotate-180' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          />
+        </button>
+
+        {isOpen ? (
+          <ul
+            ref={listboxRef}
+            id={listboxId}
+            role="listbox"
+            aria-labelledby={id}
+            aria-multiselectable="true"
+            className="absolute top-[calc(100%+4px)] left-0 z-60 max-h-[240px] w-full overflow-y-auto rounded-input border border-border-subtle bg-surface-white py-1 shadow-tier-2"
+          >
+            {options.length === 0 ? (
+              <li className="px-[13px] py-2 text-body-md text-on-surface-variant">
+                No modules available
+              </li>
+            ) : (
+              options.map((option, index) => {
+                const isSelected = selectedSet.has(option.value)
+                const isHighlighted = index === highlightedIndex
+
+                return (
+                  <li
+                    key={option.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => handleToggleValue(option.value)}
+                    className={[
+                      'flex cursor-pointer items-center gap-2 px-[13px] py-2 text-body-md text-on-surface',
+                      isHighlighted ? 'bg-row-hover' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span
+                      className={[
+                        'flex size-4 shrink-0 items-center justify-center rounded border',
+                        isSelected
+                          ? 'border-primary-action bg-primary-action text-surface-white'
+                          : 'border-border-subtle bg-surface-white',
+                      ].join(' ')}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? (
+                        <MaterialIcon name="check" size={16} className="text-surface-white" />
+                      ) : null}
+                    </span>
+                    <span className={isSelected ? 'font-medium' : ''}>{option.label}</span>
+                  </li>
+                )
+              })
+            )}
+          </ul>
+        ) : null}
+      </div>
+
       {values.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {values.map((value) => {
@@ -248,71 +299,12 @@ export function MultiSelectField({
           })}
         </div>
       ) : null}
+
       {error ? (
         <p id={`${id}-error`} className="text-label-sm text-error-red" role="alert">
           {error}
         </p>
       ) : null}
-      {isOpen && menuStyle
-        ? createPortal(
-            <ul
-              ref={listboxRef}
-              id={listboxId}
-              role="listbox"
-              aria-labelledby={id}
-              aria-multiselectable="true"
-              style={{
-                top: menuStyle.top,
-                left: menuStyle.left,
-                width: menuStyle.width,
-              }}
-              className="fixed z-60 max-h-[240px] overflow-y-auto rounded-input border border-border-subtle bg-surface-white py-1 shadow-tier-2"
-            >
-              {options.length === 0 ? (
-                <li className="px-[13px] py-2 text-body-md text-on-surface-variant">
-                  No modules available
-                </li>
-              ) : (
-                options.map((option, index) => {
-                  const isSelected = selectedSet.has(option.value)
-                  const isHighlighted = index === highlightedIndex
-
-                  return (
-                    <li
-                      key={option.value}
-                      role="option"
-                      aria-selected={isSelected}
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                      onClick={() => handleToggleValue(option.value)}
-                      className={[
-                        'flex cursor-pointer items-center gap-2 px-[13px] py-2 text-body-md text-on-surface',
-                        isHighlighted ? 'bg-row-hover' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <span
-                        className={[
-                          'flex size-4 shrink-0 items-center justify-center rounded border',
-                          isSelected
-                            ? 'border-primary-action bg-primary-action text-surface-white'
-                            : 'border-border-subtle bg-surface-white',
-                        ].join(' ')}
-                        aria-hidden="true"
-                      >
-                        {isSelected ? (
-                          <MaterialIcon name="check" size={16} className="text-surface-white" />
-                        ) : null}
-                      </span>
-                      <span className={isSelected ? 'font-medium' : ''}>{option.label}</span>
-                    </li>
-                  )
-                })
-              )}
-            </ul>,
-            document.body,
-          )
-        : null}
     </div>
   )
 }
