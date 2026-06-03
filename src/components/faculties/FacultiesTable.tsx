@@ -20,7 +20,6 @@ interface FacultiesTableProps {
   isInitialLoading: boolean
   isPageLoading: boolean
   error?: string
-  actionError?: string
   hasNext: boolean
   hasPrevious: boolean
   sortField: FacultySortField
@@ -143,7 +142,6 @@ export function FacultiesTable({
   isInitialLoading,
   isPageLoading,
   error,
-  actionError,
   hasNext,
   hasPrevious,
   sortField,
@@ -174,7 +172,6 @@ export function FacultiesTable({
       hasPrevious={hasPrevious}
       onNext={onNext}
       onPrevious={onPrevious}
-      footerError={actionError}
       emptyMessage="No faculty profiles found. Create your first faculty with the New Faculty button."
       skeletonRows={<FacultiesTableSkeletonRows />}
       header={

@@ -1,5 +1,6 @@
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import {
   BANNERS_PAGE_SIZE,
   fetchBannersPage,
@@ -9,6 +10,7 @@ import {
 import type { Banner, BannerSortField, SortDirection } from '@/types/banner'
 
 export function useBanners() {
+  const { showSnackbar } = useSnackbar()
   const [banners, setBanners] = useState<Banner[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -20,7 +22,6 @@ export function useBanners() {
   const [hasNext, setHasNext] = useState(false)
   const [lastDocOnPage, setLastDocOnPage] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
-  const [toggleError, setToggleError] = useState<string | undefined>()
   const [sortField, setSortField] = useState<BannerSortField>('createdAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
@@ -108,7 +109,6 @@ export function useBanners() {
 
   const handleToggleIsActive = useCallback(
     async (id: string, isActive: boolean) => {
-      setToggleError(undefined)
       const previousBanners = banners
 
       setBanners((prev) =>
@@ -119,12 +119,13 @@ export function useBanners() {
 
       try {
         await updateBannerIsActive(id, isActive)
+        showSnackbar('Banner status updated successfully')
       } catch {
         setBanners(previousBanners)
-        setToggleError('Failed to update banner status. Please try again.')
+        showSnackbar('Failed to update banner status. Please try again.')
       }
     },
-    [banners],
+    [banners, showSnackbar],
   )
 
   const isInitialLoading = isLoading && banners.length === 0
@@ -138,7 +139,6 @@ export function useBanners() {
     isInitialLoading,
     isPageLoading,
     error,
-    toggleError,
     hasNext,
     hasPrevious,
     sortField,

@@ -21,6 +21,7 @@ import {
   updatePlan,
 } from '@/lib/plans'
 import type { Plan } from '@/types/plan'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -83,6 +84,7 @@ export function EditPlanModal({
   onClose,
   onSaved,
 }: EditPlanModalProps) {
+  const { showSnackbar } = useSnackbar()
   const [planName, setPlanName] = useState('')
   const [planType, setPlanType] = useState<FirestorePlanType>('DURATION_BASED')
   const [originalPrice, setOriginalPrice] = useState('')
@@ -290,14 +292,17 @@ export function EditPlanModal({
         })
       }
 
+      showSnackbar(
+        isEditMode ? 'Plan updated successfully' : 'Plan created successfully',
+      )
       onSaved()
       onClose()
     } catch {
-      setFormError(
-        isEditMode
-          ? 'Failed to update plan. Please try again.'
-          : 'Failed to create plan. Please try again.',
-      )
+      const errorMessage = isEditMode
+        ? 'Failed to update plan. Please try again.'
+        : 'Failed to create plan. Please try again.'
+      showSnackbar(errorMessage)
+      setFormError(errorMessage)
       setIsSubmitting(false)
     }
   }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FirestorePlanType } from '@/config/plan-sections'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { getFirestoreErrorDetails } from '@/lib/firestore-error'
 import {
   PLANS_PAGE_SIZE,
@@ -10,12 +11,12 @@ import { isFreePlan } from '@/lib/plan-utils'
 import type { Plan } from '@/types/plan'
 
 export function usePlanSection(planType: FirestorePlanType, refreshKey = 0) {
+  const { showSnackbar } = useSnackbar()
   const [allPlans, setAllPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
   const [indexUrl, setIndexUrl] = useState<string | undefined>()
   const [pageIndex, setPageIndex] = useState(0)
-  const [actionError, setActionError] = useState<string | undefined>()
 
   const totalCount = allPlans.length
   const totalPages =
@@ -71,7 +72,6 @@ export function usePlanSection(planType: FirestorePlanType, refreshKey = 0) {
       const targetPlan = allPlans.find((plan) => plan.id === id)
       if (targetPlan && isFreePlan(targetPlan)) return
 
-      setActionError(undefined)
       const previousPlans = allPlans
 
       setAllPlans((prev) =>
@@ -80,12 +80,13 @@ export function usePlanSection(planType: FirestorePlanType, refreshKey = 0) {
 
       try {
         await updatePlanIsActive(id, isActive)
+        showSnackbar('Plan status updated successfully')
       } catch {
         setAllPlans(previousPlans)
-        setActionError('Failed to update plan status. Please try again.')
+        showSnackbar('Failed to update plan status. Please try again.')
       }
     },
-    [allPlans],
+    [allPlans, showSnackbar],
   )
 
   const isInitialLoading = isLoading && allPlans.length === 0 && !error
@@ -100,7 +101,6 @@ export function usePlanSection(planType: FirestorePlanType, refreshKey = 0) {
     isPageLoading,
     error,
     indexUrl,
-    actionError,
     hasNext,
     hasPrevious,
     handleNext,

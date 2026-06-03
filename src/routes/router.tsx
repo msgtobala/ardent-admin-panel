@@ -11,7 +11,7 @@ import LoginPage from '@/pages/LoginPage'
 import PlansPage from '@/pages/PlansPage'
 import QBanksPage from '@/pages/QBanksPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
-import UsersPage from '@/pages/UsersPage'
+import StudentsPage from '@/pages/StudentsPage'
 
 export const router = createBrowserRouter([
   {
@@ -41,8 +41,12 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
+        path: 'students',
+        element: <StudentsPage />,
+      },
+      {
         path: 'users',
-        element: <UsersPage />,
+        element: <Navigate to="/students" replace />,
       },
       {
         path: 'faculties',

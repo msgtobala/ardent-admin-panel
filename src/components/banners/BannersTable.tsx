@@ -26,7 +26,6 @@ interface BannersTableProps {
   isInitialLoading: boolean
   isPageLoading: boolean
   error?: string
-  toggleError?: string
   hasNext: boolean
   hasPrevious: boolean
   sortField: BannerSortField
@@ -158,7 +157,6 @@ export function BannersTable({
   isInitialLoading,
   isPageLoading,
   error,
-  toggleError,
   hasNext,
   hasPrevious,
   sortField,
@@ -200,7 +198,6 @@ export function BannersTable({
         hasPrevious={hasPrevious}
         onNext={onNext}
         onPrevious={onPrevious}
-        footerError={toggleError}
         emptyMessage="No banners yet. Create your first banner with the New Banner button."
         skeletonRows={<BannersTableSkeletonRows />}
         header={

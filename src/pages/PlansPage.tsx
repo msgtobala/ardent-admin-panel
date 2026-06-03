@@ -55,7 +55,7 @@ export default function PlansPage() {
       <EditPlanModal
         key={
           modalState === null
-            ? 'closed'
+            ? 'edit-plan-closed'
             : modalState.mode === 'edit'
               ? `edit-${modalState.plan.id}`
               : 'add'
@@ -66,7 +66,7 @@ export default function PlansPage() {
         onSaved={handlePlansUpdated}
       />
       <ReorderPlansModal
-        key={reorderingSection ? `reorder-${reorderingSection.key}` : 'closed'}
+        key={reorderingSection ? `reorder-${reorderingSection.key}` : 'reorder-plan-closed'}
         isOpen={reorderingSection !== null}
         section={reorderingSection}
         onClose={handleCloseReorderModal}

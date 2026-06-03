@@ -9,6 +9,7 @@ interface SortableTableHeaderProps<TField extends string> {
   sortDirection: SortDirection
   onSort: (field: TField) => void
   align?: 'left' | 'center'
+  disabled?: boolean
 }
 
 export function SortableTableHeader<TField extends string>({
@@ -18,6 +19,7 @@ export function SortableTableHeader<TField extends string>({
   sortDirection,
   onSort,
   align = 'left',
+  disabled = false,
 }: SortableTableHeaderProps<TField>) {
   const isActive = sortField === field
   const ariaSort = isActive
@@ -31,8 +33,12 @@ export function SortableTableHeader<TField extends string>({
       <button
         type="button"
         onClick={() => onSort(field)}
+        disabled={disabled}
+        aria-disabled={disabled}
+        title={disabled ? 'Clear search to change sort order' : undefined}
         className={[
-          'inline-flex cursor-pointer items-center gap-1 text-text-black transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
+          'inline-flex items-center gap-1 text-text-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-80',
           align === 'center' ? 'mx-auto' : '',
         ]
           .filter(Boolean)

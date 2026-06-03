@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { uploadBannerImage } from '@/lib/banner-storage'
 import { createBanner, updateBanner } from '@/lib/banners'
 import type { Banner } from '@/types/banner'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ActiveToggle } from './ActiveToggle'
@@ -35,6 +36,7 @@ export function AddBannerModal({
   onClose,
   onSaved,
 }: AddBannerModalProps) {
+  const { showSnackbar } = useSnackbar()
   const isEditMode = banner != null
 
   const [link, setLink] = useState(banner?.link ?? initialFormState.link)
@@ -151,6 +153,9 @@ export function AddBannerModal({
         })
       }
 
+      showSnackbar(
+        isEditMode ? 'Banner updated successfully' : 'Banner created successfully',
+      )
       resetForm()
       onSaved()
       onClose()
@@ -159,6 +164,7 @@ export function AddBannerModal({
         error instanceof Error
           ? error.message
           : 'Failed to save banner. Please try again.'
+      showSnackbar(message)
       setFormError(message)
       setIsSubmitting(false)
     }

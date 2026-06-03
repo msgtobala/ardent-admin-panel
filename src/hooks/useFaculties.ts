@@ -22,7 +22,6 @@ export function useFaculties() {
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
   const [sortField, setSortField] = useState<FacultySortField>('displayName')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [actionError, setActionError] = useState<string | undefined>()
 
   const hasPrevious = pageIndex > 0
 
@@ -108,12 +107,10 @@ export function useFaculties() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      setActionError(undefined)
       try {
         await deleteFaculty(id)
         refreshFaculties()
       } catch {
-        setActionError('Failed to delete faculty. Please try again.')
         throw new Error('Failed to delete faculty')
       }
     },
@@ -131,7 +128,6 @@ export function useFaculties() {
     isInitialLoading,
     isPageLoading,
     error,
-    actionError,
     hasNext,
     hasPrevious,
     sortField,

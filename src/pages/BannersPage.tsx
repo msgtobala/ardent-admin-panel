@@ -20,7 +20,6 @@ export default function BannersPage() {
     isInitialLoading,
     isPageLoading,
     error,
-    toggleError,
     hasNext,
     hasPrevious,
     sortField,
@@ -60,7 +59,6 @@ export default function BannersPage() {
         isInitialLoading={isInitialLoading}
         isPageLoading={isPageLoading}
         error={error}
-        toggleError={toggleError}
         hasNext={hasNext}
         hasPrevious={hasPrevious}
         sortField={sortField}

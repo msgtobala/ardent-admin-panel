@@ -22,7 +22,6 @@ export default function FacultiesPage() {
     isInitialLoading,
     isPageLoading,
     error,
-    actionError,
     hasNext,
     hasPrevious,
     sortField,
@@ -78,7 +77,6 @@ export default function FacultiesPage() {
         isInitialLoading={isInitialLoading}
         isPageLoading={isPageLoading}
         error={error}
-        actionError={actionError}
         hasNext={hasNext}
         hasPrevious={hasPrevious}
         sortField={sortField}

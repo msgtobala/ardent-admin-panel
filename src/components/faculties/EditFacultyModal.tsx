@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createFaculty, updateFaculty } from '@/lib/faculties'
 import type { Faculty } from '@/types/faculty'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { TextField } from '@/components/ui/TextField'
@@ -39,6 +40,7 @@ export function EditFacultyModal({
   onClose,
   onSaved,
 }: EditFacultyModalProps) {
+  const { showSnackbar } = useSnackbar()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -175,14 +177,19 @@ export function EditFacultyModal({
         await createFaculty(payload)
       }
 
+      showSnackbar(
+        isEditMode
+          ? 'Faculty updated successfully'
+          : 'Faculty created successfully',
+      )
       onSaved()
       onClose()
     } catch {
-      setFormError(
-        isEditMode
-          ? 'Failed to update faculty. Please try again.'
-          : 'Failed to create faculty. Please try again.',
-      )
+      const errorMessage = isEditMode
+        ? 'Failed to update faculty. Please try again.'
+        : 'Failed to create faculty. Please try again.'
+      showSnackbar(errorMessage)
+      setFormError(errorMessage)
       setIsSubmitting(false)
     }
   }

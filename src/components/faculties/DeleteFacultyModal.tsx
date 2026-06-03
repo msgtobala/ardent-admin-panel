@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Faculty } from '@/types/faculty'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -21,6 +22,7 @@ export function DeleteFacultyModal({
   onClose,
   onConfirm,
 }: DeleteFacultyModalProps) {
+  const { showSnackbar } = useSnackbar()
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | undefined>()
 
@@ -58,9 +60,12 @@ export function DeleteFacultyModal({
 
     try {
       await onConfirm()
+      showSnackbar('Faculty deleted successfully')
       onClose()
     } catch {
-      setError('Failed to delete faculty. Please try again.')
+      const errorMessage = 'Failed to delete faculty. Please try again.'
+      showSnackbar(errorMessage)
+      setError(errorMessage)
       setIsDeleting(false)
     }
   }

@@ -17,7 +17,6 @@ import {
   TableCell,
   TableElement,
   TableErrorState,
-  TableFooterMessage,
   TableHeader,
   TableHeaderRow,
   TableHeadCell,
@@ -206,7 +205,6 @@ function PlanSectionCard({
     isPageLoading,
     error,
     indexUrl,
-    actionError,
     hasNext,
     hasPrevious,
     handleNext,
@@ -288,10 +286,6 @@ function PlanSectionCard({
           </TableBody>
         </TableElement>
       </TableScrollArea>
-
-      {actionError ? (
-        <TableFooterMessage>{actionError}</TableFooterMessage>
-      ) : null}
 
       <TablePagination
         currentPage={currentPage}

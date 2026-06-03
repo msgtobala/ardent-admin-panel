@@ -4,6 +4,7 @@ import { buildDisplayOrderUpdates, movePlanInList } from '@/lib/plan-reorder'
 import { fetchPlansByType, updatePlansDisplayOrder } from '@/lib/plans'
 import { isFreePlan } from '@/lib/plan-utils'
 import type { Plan } from '@/types/plan'
+import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -23,6 +24,7 @@ export function ReorderPlansModal({
   onClose,
   onSaved,
 }: ReorderPlansModalProps) {
+  const { showSnackbar } = useSnackbar()
   const [orderedPlans, setOrderedPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -98,10 +100,13 @@ export function ReorderPlansModal({
 
     try {
       await updatePlansDisplayOrder(buildDisplayOrderUpdates(orderedPlans))
+      showSnackbar('Plan order saved successfully')
       onSaved()
       onClose()
     } catch {
-      setFormError('Failed to save plan order. Please try again.')
+      const errorMessage = 'Failed to save plan order. Please try again.'
+      showSnackbar(errorMessage)
+      setFormError(errorMessage)
       setIsSubmitting(false)
     }
   }
