@@ -39,6 +39,6 @@ export interface PlanDocument {
   updatedAt?: Timestamp
 }
 
-export type PlanSortField = 'planName' | 'planType' | 'sellingPrice' | 'isActive'
+export type PlanSortField = 'displayOrder' | 'planName' | 'sellingPrice' | 'isActive'
 
 export type { SortDirection } from '@/types/table'

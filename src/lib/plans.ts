@@ -1,18 +1,16 @@
 import {
   collection,
   doc,
-  getCountFromServer,
   getDocs,
-  limit,
-  orderBy,
   query,
   serverTimestamp,
-  startAfter,
   updateDoc,
+  where,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
-import type { Plan, PlanDocument, PlanSortField, SortDirection } from '@/types/plan'
+import type { FirestorePlanType } from '@/config/plan-sections'
+import type { Plan, PlanDocument } from '@/types/plan'
 import { db } from './firebase'
 
 /**
@@ -20,6 +18,9 @@ import { db } from './firebase'
  * Document fields: planId, planName, planType, originalPrice, sellingPrice,
  * durationMonths, planModules, description, displayOrder, badge, validUntilDate,
  * isActive, createdBy, updatedBy, createdAt, updatedAt
+ *
+ * Queries filter by planType only (single-field index). Sorting and pagination
+ * are handled in the client after fetch.
  */
 export const PLANS_COLLECTION = 'plans'
 export const PLANS_PAGE_SIZE = 10
@@ -56,48 +57,22 @@ export function mapPlanDoc(snapshot: QueryDocumentSnapshot<DocumentData>): Plan 
   }
 }
 
-export interface FetchPlansPageResult {
-  plans: Plan[]
-  lastDoc: QueryDocumentSnapshot<DocumentData> | null
-  firstDoc: QueryDocumentSnapshot<DocumentData> | null
-  hasMore: boolean
+function sortPlans(plans: Plan[]): Plan[] {
+  return [...plans].sort((left, right) => {
+    if (left.displayOrder !== right.displayOrder) {
+      return left.displayOrder - right.displayOrder
+    }
+
+    return left.planName.localeCompare(right.planName)
+  })
 }
 
-export async function fetchPlansPage(options: {
-  pageSize?: number
-  lastDoc?: QueryDocumentSnapshot<DocumentData> | null
-  sortField?: PlanSortField
-  sortDirection?: SortDirection
-}): Promise<FetchPlansPageResult> {
-  const pageSize = options.pageSize ?? PLANS_PAGE_SIZE
-  const sortField = options.sortField ?? 'planName'
-  const sortDirection = options.sortDirection ?? 'asc'
+export async function fetchPlansByType(planType: FirestorePlanType): Promise<Plan[]> {
+  const snapshot = await getDocs(
+    query(plansRef, where('planType', '==', planType)),
+  )
 
-  const q = options.lastDoc
-    ? query(
-        plansRef,
-        orderBy(sortField, sortDirection),
-        startAfter(options.lastDoc),
-        limit(pageSize + 1),
-      )
-    : query(plansRef, orderBy(sortField, sortDirection), limit(pageSize + 1))
-
-  const snapshot = await getDocs(q)
-  const docs = snapshot.docs
-  const hasMore = docs.length > pageSize
-  const pageDocs = hasMore ? docs.slice(0, pageSize) : docs
-
-  return {
-    plans: pageDocs.map(mapPlanDoc),
-    lastDoc: pageDocs.length > 0 ? pageDocs[pageDocs.length - 1] : null,
-    firstDoc: pageDocs.length > 0 ? pageDocs[0] : null,
-    hasMore,
-  }
-}
-
-export async function getPlansCount(): Promise<number> {
-  const snapshot = await getCountFromServer(plansRef)
-  return snapshot.data().count
+  return sortPlans(snapshot.docs.map(mapPlanDoc))
 }
 
 export async function updatePlanIsActive(id: string, isActive: boolean): Promise<void> {

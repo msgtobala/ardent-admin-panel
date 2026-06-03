@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { normalizePlanType } from '@/config/plan-sections'
 import { updatePlan } from '@/lib/plans'
 import type { Plan } from '@/types/plan'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
@@ -130,7 +131,7 @@ export function EditPlanModal({
     try {
       await updatePlan(plan.id, {
         planName: planName.trim(),
-        planType: planType.trim(),
+        planType: normalizePlanType(planType),
         originalPrice: parseNumber(originalPrice),
         sellingPrice: parseNumber(sellingPrice),
         durationMonths: Math.max(0, Math.round(parseNumber(durationMonths))),

@@ -1,34 +1,16 @@
 import { useState } from 'react'
 import { EditPlanModal } from '@/components/plans/EditPlanModal'
 import { PlansPageHeader } from '@/components/plans/PlansPageHeader'
-import { PlansTable } from '@/components/plans/PlansTable'
-import { usePlans } from '@/hooks/usePlans'
+import { PlansSections } from '@/components/plans/PlansSections'
+import { isFreePlan } from '@/lib/plan-utils'
 import type { Plan } from '@/types/plan'
 
 export default function PlansPage() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const {
-    plans,
-    currentPage,
-    totalPages,
-    isLoading,
-    isInitialLoading,
-    isPageLoading,
-    error,
-    actionError,
-    hasNext,
-    hasPrevious,
-    sortField,
-    sortDirection,
-    handleSort,
-    handleNext,
-    handlePrevious,
-    handleRetry,
-    handleToggleIsActive,
-    refreshPlans,
-  } = usePlans()
+  const [refreshKey, setRefreshKey] = useState(0)
 
   function handleEditPlan(plan: Plan) {
+    if (isFreePlan(plan)) return
     setEditingPlan(plan)
   }
 
@@ -37,32 +19,13 @@ export default function PlansPage() {
   }
 
   function handlePlanSaved() {
-    refreshPlans()
+    setRefreshKey((prev) => prev + 1)
   }
 
   return (
     <div className="flex flex-col gap-gutter">
       <PlansPageHeader />
-      <PlansTable
-        plans={plans}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        isLoading={isLoading}
-        isInitialLoading={isInitialLoading}
-        isPageLoading={isPageLoading}
-        error={error}
-        actionError={actionError}
-        hasNext={hasNext}
-        hasPrevious={hasPrevious}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onSort={handleSort}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onRetry={handleRetry}
-        onEdit={handleEditPlan}
-        onToggleIsActive={handleToggleIsActive}
-      />
+      <PlansSections refreshKey={refreshKey} onEdit={handleEditPlan} />
       <EditPlanModal
         key={editingPlan ? `edit-${editingPlan.id}` : 'closed'}
         isOpen={editingPlan !== null}
