@@ -1,0 +1,35 @@
+---
+description: Rules for icons in the Ardent Admin UI — use Google Material Symbols, not Figma exports
+globs: "**/*.{js,jsx,ts,tsx}"
+alwaysApply: false
+---
+
+# Icons
+
+## Source of truth
+
+- Use **Google Material Symbols Outlined** for all UI icons (navigation, actions, form controls, status, etc.).
+- Icon font is loaded in [index.html](../../index.html). Base styles live in [src/styles/material-icons.css](../../src/styles/material-icons.css).
+- Render icons with the shared [`MaterialIcon`](../../src/components/ui/MaterialIcon.tsx) component — do not use raw `<img>` or inline SVG for standard UI icons.
+
+## Do not use Figma for icons
+
+- **Never download icon assets from Figma** (PNG/SVG exports for affordances like visibility, close, menu, chevrons, etc.).
+- Map the design intent to the closest [Material Symbols](https://fonts.google.com/icons) name instead (e.g. `visibility` / `visibility_off`, `close`, `menu`, `chevron_right`).
+- Figma exports are only for **non-icon brand assets** (e.g. full logo marks, illustrations).
+
+## Usage
+
+```tsx
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+<MaterialIcon name="visibility" size={18} className="text-on-surface-variant" />
+```
+
+- Pick `size` 18 | 20 | 24 to match context (inputs: 18, buttons: 20, headers: 24).
+- Style with Tailwind text/color utilities on `className`; keep icons `aria-hidden` unless the control has an `aria-label` on the parent button/link.
+- Toggle states: swap icon `name` (e.g. `visibility` ↔ `visibility_off`), not separate image files.
+
+## Adding new icons
+
+Use any [Material Symbols Outlined](https://fonts.google.com/icons) name with `MaterialIcon`. The variable font is loaded from Google Fonts in `index.html` — no per-icon Figma export or local SVG required.

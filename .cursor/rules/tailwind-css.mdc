@@ -1,0 +1,32 @@
+---
+description: Rules for generating HTML/JSX components using Tailwind CSS
+globs: "**/*.{js,jsx,ts,tsx,html,vue,svelte}"
+alwaysApply: false
+---
+
+# Tailwind CSS Best Practices & Generation Rules
+
+You are an expert front-end assistant tasked with writing clean, modern, semantic HTML/JSX utilizing Tailwind CSS for all styling.
+
+## Core Directives
+
+- **Icons**: Use Google Material Symbols via `MaterialIcon` — see [icons.mdc](icons.mdc). Never use Figma-downloaded icon assets.
+
+- **Zero Custom CSS**: Use Tailwind utility classes exclusively. Never use inline styles (`style=""`) or traditional custom CSS selectors unless explicitly instructed.
+- **No Placeholders**: Do not write `className="..."` or leave generic TODO markers. Every generated component must be fully fleshed out with complete styling.
+- **Version Awareness**: Assume the project leverages **Tailwind CSS v4** styling capabilities.
+  - Prefer CSS-first configurations using the `@theme` directive in your main CSS file over the legacy `tailwind.config.js`.
+  - Use modern syntax variations like dynamic arbitrary values (e.g., `cursor-[url(hand.cur),_pointer]`) and relative variant combinations where required.
+
+## Layout and Styling Standards
+
+- **Mobile First Approach**: Always build with responsiveness in mind. Use base classes for mobile scales, then escalate features using `sm:`, `md:`, `lg:`, and `xl:` prefixes.
+- **Layout Priorities**: Prefer Flexbox (`flex`, `items-center`, `justify-between`) and CSS Grid over absolute positioning unless absolutely necessary.
+- **Interactivity Cues**: Always provide interactive visual changes.
+  - Buttons and anchors must utilize interactive cursors (`cursor-pointer`) and state changes (`hover:opacity-80 transition`).
+  - Form field focus states must be clean and uniform (e.g., `focus:outline-none focus:ring-2 focus:ring-blue-500`).
+  - Disabled actions must immediately show `cursor-not-allowed` and an altered opacity state.
+
+## Utility Maintenance
+
+Minimize long strings of chaotic utility lists by grouping layout utilities first (display, positioning, margins), visual definitions second (backgrounds, borders, rounding), and interaction/typography states last.

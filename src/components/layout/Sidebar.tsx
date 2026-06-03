@@ -1,0 +1,73 @@
+import { signOut } from 'firebase/auth'
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
+import ardentLogo from '../../assets/ardent-logo.png'
+import { NAV_ITEMS } from '../../config/navigation'
+import { auth } from '../../lib/firebase'
+import { MaterialIcon } from '../ui/MaterialIcon'
+
+export function Sidebar() {
+  const [isSigningOut, setIsSigningOut] = useState(false)
+
+  async function handleLogout() {
+    setIsSigningOut(true)
+    try {
+      await signOut(auth)
+    } catch {
+      setIsSigningOut(false)
+    }
+  }
+
+  return (
+    <aside className="flex h-svh w-sidebar-width shrink-0 flex-col border-r border-border-subtle bg-surface-white py-gutter shadow-tier-1">
+      <div className="mb-8 px-gutter">
+        <div className="flex items-center gap-3">
+          <img
+            src={ardentLogo}
+            alt="Ardent"
+            className="h-10 w-auto"
+            width={51}
+            height={40}
+          />
+          <div className="flex flex-col">
+            <span className="text-h2 font-bold text-primary-action">Ardent</span>
+            <span className="text-caption text-on-surface-variant">LMS Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Main navigation">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              [
+                'flex items-center gap-3 border-l-4 py-3 pl-7 pr-gutter text-body-md transition',
+                isActive
+                  ? 'border-primary-action bg-surface text-primary-action'
+                  : 'border-transparent text-on-surface-variant hover:bg-row-hover',
+              ].join(' ')
+            }
+          >
+            <MaterialIcon name={item.icon} size={18} />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="mt-auto border-t border-border-subtle px-gutter pt-[17px]">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isSigningOut}
+          aria-label="Logout"
+          className="flex w-full cursor-pointer items-center gap-3 py-3 text-body-md text-on-surface-variant transition hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <MaterialIcon name="logout" size={18} />
+          {isSigningOut ? 'Signing out...' : 'Logout'}
+        </button>
+      </div>
+    </aside>
+  )
+}

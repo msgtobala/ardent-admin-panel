@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+@import './styles/fonts.css';
+@import './styles/theme.css';
+@import './styles/material-icons.css';
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply min-h-svh bg-app-bg font-sans text-body-md text-on-background;
+  }
+
+  #root {
+    @apply min-h-svh;
+  }
+}
