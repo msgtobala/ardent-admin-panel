@@ -45,10 +45,6 @@ export default function StudentsPage() {
     refreshStudents()
   }
 
-  function handleOpenStudentDetails(_student: Student) {
-    // Student detail navigation will be implemented in a follow-up.
-  }
-
   return (
     <div className="flex flex-col gap-gutter">
       <StudentsPageHeader
@@ -79,7 +75,6 @@ export default function StudentsPage() {
         onPrevious={handlePrevious}
         onRetry={handleRetry}
         onEdit={handleEditStudent}
-        onOpenDetails={handleOpenStudentDetails}
       />
       <EditStudentModal
         key={editingStudentUid ? `edit-student-${editingStudentUid}` : 'edit-student-closed'}

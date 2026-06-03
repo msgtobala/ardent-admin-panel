@@ -36,7 +36,6 @@ interface StudentsTableProps {
   onPrevious: () => void
   onRetry: () => void
   onEdit: (student: Student) => void
-  onOpenDetails: (student: Student) => void
 }
 
 const STUDENT_COLUMN_WIDTHS = [undefined, 'w-[220px]', 'w-[140px]', undefined, 'w-[148px]']
@@ -69,11 +68,9 @@ function StudentsTableSkeletonRows() {
 function StudentRow({
   student,
   onEdit,
-  onOpenDetails,
 }: {
   student: Student
   onEdit: (student: Student) => void
-  onOpenDetails: (student: Student) => void
 }) {
   const displayName = getStudentDisplayName(student)
   const authMethod = getAuthenticationMethodDisplay(student.authenticationMethod)
@@ -116,18 +113,6 @@ function StudentRow({
               className="text-on-surface-variant"
             />
           </button>
-          <button
-            type="button"
-            aria-label={`Open student details for ${displayName}`}
-            onClick={() => onOpenDetails(student)}
-            className={actionButtonClassName}
-          >
-            <MaterialIcon
-              name="chevron_right"
-              size={20}
-              className="text-on-surface-variant"
-            />
-          </button>
         </div>
       </TableCell>
     </TableRow>
@@ -153,7 +138,6 @@ export function StudentsTable({
   onPrevious,
   onRetry,
   onEdit,
-  onOpenDetails,
 }: StudentsTableProps) {
   if (error) {
     return (
@@ -213,7 +197,6 @@ export function StudentsTable({
           key={student.id}
           student={student}
           onEdit={onEdit}
-          onOpenDetails={onOpenDetails}
         />
       ))}
     </DataTable>
