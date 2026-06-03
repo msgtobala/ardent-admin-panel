@@ -7,6 +7,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import FacultiesPage from '@/pages/FacultiesPage'
 import GrandTestsPage from '@/pages/GrandTestsPage'
 import LoginPage from '@/pages/LoginPage'
+import PlansPage from '@/pages/PlansPage'
 import QBanksPage from '@/pages/QBanksPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
 import UsersPage from '@/pages/UsersPage'
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
       {
         path: 'faculties',
         element: <FacultiesPage />,
+      },
+      {
+        path: 'plans',
+        element: <PlansPage />,
       },
       {
         path: 'banners',

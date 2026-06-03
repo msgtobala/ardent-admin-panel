@@ -28,6 +28,12 @@ export const NAV_ITEMS: NavItem[] = [
     breadcrumbs: { parent: 'Faculties', current: 'Overview' },
   },
   {
+    label: 'Plans',
+    path: '/plans',
+    icon: 'payments',
+    breadcrumbs: { parent: 'Plans', current: 'Overview' },
+  },
+  {
     label: 'Users',
     path: '/users',
     icon: 'group',
