@@ -4,8 +4,10 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
@@ -82,14 +84,60 @@ export async function updatePlanIsActive(id: string, isActive: boolean): Promise
   })
 }
 
-export interface UpdatePlanInput {
+export async function getNextDisplayOrder(planType: FirestorePlanType): Promise<number> {
+  const plans = await fetchPlansByType(planType)
+  if (plans.length === 0) return 0
+
+  const maxOrder = Math.max(...plans.map((plan) => plan.displayOrder))
+  return maxOrder + 1
+}
+
+export interface UpsertPlanInput {
   planName: string
-  planType: string
+  planType: FirestorePlanType
   originalPrice: number
   sellingPrice: number
   durationMonths: number
+  description: string[]
+  planModules: string[]
   isActive: boolean
   displayOrder: number
+}
+
+export async function createPlan(input: UpsertPlanInput): Promise<string> {
+  const docRef = doc(plansRef)
+  const now = serverTimestamp()
+
+  await setDoc(docRef, {
+    planId: docRef.id,
+    planName: input.planName,
+    planType: input.planType,
+    originalPrice: input.originalPrice,
+    sellingPrice: input.sellingPrice,
+    durationMonths: input.durationMonths,
+    planModules: input.planModules,
+    description: input.description,
+    displayOrder: input.displayOrder,
+    badge: '',
+    isActive: input.isActive,
+    createdBy: '',
+    updatedBy: '',
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  return docRef.id
+}
+
+export interface UpdatePlanInput {
+  planName: string
+  planType: FirestorePlanType
+  originalPrice: number
+  sellingPrice: number
+  durationMonths: number
+  description: string[]
+  planModules: string[]
+  isActive: boolean
 }
 
 export async function updatePlan(id: string, input: UpdatePlanInput): Promise<void> {
@@ -100,8 +148,26 @@ export async function updatePlan(id: string, input: UpdatePlanInput): Promise<vo
     originalPrice: input.originalPrice,
     sellingPrice: input.sellingPrice,
     durationMonths: input.durationMonths,
+    description: input.description,
+    planModules: input.planModules,
     isActive: input.isActive,
-    displayOrder: input.displayOrder,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function updatePlansDisplayOrder(
+  updates: { id: string; displayOrder: number }[],
+): Promise<void> {
+  if (updates.length === 0) return
+
+  const batch = writeBatch(db)
+
+  for (const update of updates) {
+    batch.update(doc(db, PLANS_COLLECTION, update.id), {
+      displayOrder: update.displayOrder,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  await batch.commit()
 }

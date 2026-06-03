@@ -1,11 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
-import { normalizePlanType } from '@/config/plan-sections'
-import { updatePlan } from '@/lib/plans'
+import {
+  PLAN_SECTIONS,
+  normalizePlanType,
+  type FirestorePlanType,
+} from '@/config/plan-sections'
+import {
+  createPlan,
+  getNextDisplayOrder,
+  updatePlan,
+} from '@/lib/plans'
 import type { Plan } from '@/types/plan'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { SelectField } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
+import {
+  PlanDescriptionList,
+  normalizePlanDescriptions,
+} from './PlanDescriptionList'
 
 interface EditPlanModalProps {
   isOpen: boolean
@@ -17,11 +30,11 @@ interface EditPlanModalProps {
 function getInitialFormState(plan: Plan | null) {
   return {
     planName: plan?.planName ?? '',
-    planType: plan?.planType ?? '',
+    planType: (plan?.planType ?? 'DURATION_BASED') as FirestorePlanType,
     originalPrice: plan?.originalPrice?.toString() ?? '',
     sellingPrice: plan?.sellingPrice?.toString() ?? '',
     durationMonths: plan?.durationMonths?.toString() ?? '',
-    displayOrder: plan?.displayOrder?.toString() ?? '',
+    descriptions: plan?.description?.length ? [...plan.description] : [],
     isActive: plan?.isActive ?? true,
   }
 }
@@ -33,17 +46,19 @@ export function EditPlanModal({
   onSaved,
 }: EditPlanModalProps) {
   const [planName, setPlanName] = useState('')
-  const [planType, setPlanType] = useState('')
+  const [planType, setPlanType] = useState<FirestorePlanType>('DURATION_BASED')
   const [originalPrice, setOriginalPrice] = useState('')
   const [sellingPrice, setSellingPrice] = useState('')
   const [durationMonths, setDurationMonths] = useState('')
-  const [displayOrder, setDisplayOrder] = useState('')
+  const [descriptions, setDescriptions] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [planNameError, setPlanNameError] = useState<string | undefined>()
   const [planTypeError, setPlanTypeError] = useState<string | undefined>()
   const [sellingPriceError, setSellingPriceError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const isEditMode = plan != null
 
   useEffect(() => {
     if (!isOpen) return
@@ -54,7 +69,7 @@ export function EditPlanModal({
     setOriginalPrice(initial.originalPrice)
     setSellingPrice(initial.sellingPrice)
     setDurationMonths(initial.durationMonths)
-    setDisplayOrder(initial.displayOrder)
+    setDescriptions(initial.descriptions)
     setIsActive(initial.isActive)
     setPlanNameError(undefined)
     setPlanTypeError(undefined)
@@ -92,7 +107,6 @@ export function EditPlanModal({
   function validate(): boolean {
     let valid = true
     const trimmedPlanName = planName.trim()
-    const trimmedPlanType = planType.trim()
     const trimmedSellingPrice = sellingPrice.trim()
 
     if (!trimmedPlanName) {
@@ -102,7 +116,7 @@ export function EditPlanModal({
       setPlanNameError(undefined)
     }
 
-    if (!trimmedPlanType) {
+    if (!planType) {
       setPlanTypeError('Plan type is required')
       valid = false
     } else {
@@ -123,31 +137,47 @@ export function EditPlanModal({
   }
 
   async function handleSave() {
-    if (!plan || !validate()) return
+    if (!validate()) return
 
     setFormError(undefined)
     setIsSubmitting(true)
 
+    const normalizedPlanType = normalizePlanType(planType) as FirestorePlanType
+    const payload = {
+      planName: planName.trim(),
+      planType: normalizedPlanType,
+      originalPrice: parseNumber(originalPrice),
+      sellingPrice: parseNumber(sellingPrice),
+      durationMonths: Math.max(0, Math.round(parseNumber(durationMonths))),
+      description: normalizePlanDescriptions(descriptions),
+      planModules: plan?.planModules ?? [],
+      isActive,
+    }
+
     try {
-      await updatePlan(plan.id, {
-        planName: planName.trim(),
-        planType: normalizePlanType(planType),
-        originalPrice: parseNumber(originalPrice),
-        sellingPrice: parseNumber(sellingPrice),
-        durationMonths: Math.max(0, Math.round(parseNumber(durationMonths))),
-        displayOrder: Math.round(parseNumber(displayOrder)),
-        isActive,
-      })
+      if (isEditMode && plan) {
+        await updatePlan(plan.id, payload)
+      } else {
+        const displayOrder = await getNextDisplayOrder(normalizedPlanType)
+        await createPlan({
+          ...payload,
+          displayOrder,
+        })
+      }
 
       onSaved()
       onClose()
     } catch {
-      setFormError('Failed to update plan. Please try again.')
+      setFormError(
+        isEditMode
+          ? 'Failed to update plan. Please try again.'
+          : 'Failed to create plan. Please try again.',
+      )
       setIsSubmitting(false)
     }
   }
 
-  if (!isOpen || !plan) return null
+  if (!isOpen) return null
 
   return (
     <div
@@ -156,7 +186,7 @@ export function EditPlanModal({
     >
       <button
         type="button"
-        aria-label="Close edit plan dialog"
+        aria-label={isEditMode ? 'Close edit plan dialog' : 'Close add plan dialog'}
         className="absolute inset-0 cursor-pointer bg-on-surface/40"
         onClick={handleClose}
         disabled={isSubmitting}
@@ -164,16 +194,18 @@ export function EditPlanModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-plan-modal-title"
+        aria-labelledby="plan-modal-title"
         className="relative z-10 flex max-h-[90vh] w-full max-w-[672px] flex-col overflow-hidden rounded-xl bg-surface-white shadow-tier-2"
       >
         <div className="flex items-start justify-between border-b border-border-subtle bg-surface px-gutter py-5">
           <div className="flex flex-col gap-2 pr-4">
-            <h2 id="edit-plan-modal-title" className="text-h3 text-on-surface">
-              Edit Plan
+            <h2 id="plan-modal-title" className="text-h3 text-on-surface">
+              {isEditMode ? 'Edit Plan' : 'Add New Plan'}
             </h2>
             <p className="text-body-md text-on-surface-variant">
-              Update plan details for the Ardent MDS Plus app
+              {isEditMode
+                ? 'Update plan details for the Ardent MDS Plus app'
+                : 'Create a new plan for the Ardent MDS Plus app'}
             </p>
           </div>
           <button
@@ -208,15 +240,19 @@ export function EditPlanModal({
             }}
           />
 
-          <TextField
+          <SelectField
             id="plan-type"
             label="Plan Type"
             value={planType}
-            disabled={isSubmitting}
             required
+            disabled={isSubmitting}
             error={planTypeError}
-            onChange={(event) => {
-              setPlanType(event.target.value)
+            options={PLAN_SECTIONS.map((section) => ({
+              value: section.planType,
+              label: section.title,
+            }))}
+            onChange={(nextPlanType) => {
+              setPlanType(nextPlanType as FirestorePlanType)
               if (planTypeError) setPlanTypeError(undefined)
             }}
           />
@@ -247,25 +283,21 @@ export function EditPlanModal({
             />
           </div>
 
-          <div className="grid gap-gutter sm:grid-cols-2">
-            <TextField
-              id="plan-duration-months"
-              label="Duration (months)"
-              type="number"
-              min={0}
-              value={durationMonths}
-              disabled={isSubmitting}
-              onChange={(event) => setDurationMonths(event.target.value)}
-            />
-            <TextField
-              id="plan-display-order"
-              label="Display Order"
-              type="number"
-              value={displayOrder}
-              disabled={isSubmitting}
-              onChange={(event) => setDisplayOrder(event.target.value)}
-            />
-          </div>
+          <TextField
+            id="plan-duration-months"
+            label="Duration (months)"
+            type="number"
+            min={0}
+            value={durationMonths}
+            disabled={isSubmitting}
+            onChange={(event) => setDurationMonths(event.target.value)}
+          />
+
+          <PlanDescriptionList
+            descriptions={descriptions}
+            disabled={isSubmitting}
+            onChange={setDescriptions}
+          />
 
           <div className="flex items-center justify-between rounded-input border border-border-subtle bg-surface-container-low px-4 py-3">
             <div className="flex flex-col gap-1">

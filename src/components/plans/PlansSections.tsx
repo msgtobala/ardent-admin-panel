@@ -6,6 +6,7 @@ import { formatPlanModules, isFreePlan } from '@/lib/plan-utils'
 import type { Plan } from '@/types/plan'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { StatusBadge } from '@/components/banners/StatusBadge'
+import { Button } from '@/components/ui/Button'
 import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { TableLoadingOverlay } from '@/components/ui/table/TableLoadingOverlay'
@@ -27,6 +28,7 @@ import {
 interface PlansSectionsProps {
   refreshKey: number
   onEdit: (plan: Plan) => void
+  onEditSortOrder: (section: PlanSectionConfig) => void
 }
 
 const SECTION_COLUMN_WIDTHS = [
@@ -65,24 +67,41 @@ function PlanSectionSkeletonRows() {
   ))
 }
 
-function PlanSectionHeader({ section }: { section: PlanSectionConfig }) {
+function PlanSectionHeader({
+  section,
+  onEditSortOrder,
+}: {
+  section: PlanSectionConfig
+  onEditSortOrder: () => void
+}) {
   return (
-    <div className="flex items-start gap-4 border-b border-border-subtle px-gutter py-5">
-      <div
-        aria-hidden
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-fixed"
-      >
-        <MaterialIcon name={section.icon} size={20} className="text-primary" />
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2
-          id={`plan-section-${section.key}`}
-          className="text-card-title text-on-surface"
+    <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-gutter py-5">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        <div
+          aria-hidden
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-fixed"
         >
-          {section.title}
-        </h2>
-        <p className="text-body-md text-on-surface-variant">{section.description}</p>
+          <MaterialIcon name={section.icon} size={20} className="text-primary" />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2
+            id={`plan-section-${section.key}`}
+            className="text-card-title text-on-surface"
+          >
+            {section.title}
+          </h2>
+          <p className="text-body-md text-on-surface-variant">{section.description}</p>
+        </div>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onEditSortOrder}
+        className="shrink-0 gap-2"
+      >
+        <MaterialIcon name="swap_vert" size={16} />
+        Edit sort order
+      </Button>
     </div>
   )
 }
@@ -171,10 +190,12 @@ function PlanSectionCard({
   section,
   refreshKey,
   onEdit,
+  onEditSortOrder,
 }: {
   section: PlanSectionConfig
   refreshKey: number
   onEdit: (plan: Plan) => void
+  onEditSortOrder: (section: PlanSectionConfig) => void
 }) {
   const {
     plans,
@@ -200,7 +221,10 @@ function PlanSectionCard({
         aria-labelledby={`plan-section-${section.key}`}
         className="overflow-hidden rounded-xl border border-border-subtle bg-surface-white shadow-tier-1"
       >
-        <PlanSectionHeader section={section} />
+        <PlanSectionHeader
+          section={section}
+          onEditSortOrder={() => onEditSortOrder(section)}
+        />
         <TableErrorState
           message={error}
           indexUrl={indexUrl}
@@ -216,7 +240,10 @@ function PlanSectionCard({
       aria-labelledby={`plan-section-${section.key}`}
       className="overflow-hidden rounded-xl border border-border-subtle bg-surface-white shadow-tier-1"
     >
-      <PlanSectionHeader section={section} />
+      <PlanSectionHeader
+        section={section}
+        onEditSortOrder={() => onEditSortOrder(section)}
+      />
       <TableScrollArea
         isPageLoading={isPageLoading}
         loadingOverlay={<TableLoadingOverlay />}
@@ -279,7 +306,11 @@ function PlanSectionCard({
   )
 }
 
-export function PlansSections({ refreshKey, onEdit }: PlansSectionsProps) {
+export function PlansSections({
+  refreshKey,
+  onEdit,
+  onEditSortOrder,
+}: PlansSectionsProps) {
   return (
     <div className="flex flex-col gap-gutter">
       {PLAN_SECTIONS.map((section) => (
@@ -288,6 +319,7 @@ export function PlansSections({ refreshKey, onEdit }: PlansSectionsProps) {
           section={section}
           refreshKey={refreshKey}
           onEdit={onEdit}
+          onEditSortOrder={onEditSortOrder}
         />
       ))}
     </div>
