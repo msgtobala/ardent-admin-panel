@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getCountFromServer,
   getDoc,
@@ -8,13 +9,22 @@ import {
   orderBy,
   query,
   startAfter,
+  updateDoc,
   where,
   type DocumentData,
   type Query,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { resolveStudentSearchField } from '@/lib/student-utils'
-import type { Student, StudentDocument, StudentSortField } from '@/types/student'
+import type {
+  Student,
+  StudentAcademicDetails,
+  StudentDetail,
+  StudentDocument,
+  StudentPlansSnapshot,
+  StudentSortField,
+  UpdateStudentInput,
+} from '@/types/student'
 import type { SortDirection } from '@/types/table'
 import { db } from './firebase'
 
@@ -42,6 +52,35 @@ function parsePlanName(plans: StudentDocument['plans']): string {
   return ''
 }
 
+function parseStudentState(state: unknown): string {
+  if (typeof state === 'string') return state.trim()
+  if (!state || typeof state !== 'object') return ''
+
+  const stateRecord = state as Record<string, unknown>
+  if (typeof stateRecord.code === 'string') return stateRecord.code.trim()
+  if (typeof stateRecord.name === 'string') return stateRecord.name.trim()
+
+  return ''
+}
+
+function parseAcademicDetails(
+  academicDetails: StudentDocument['academicDetails'],
+): StudentAcademicDetails {
+  return {
+    collegeState: academicDetails?.collegeState?.trim() ?? '',
+    collegeName: academicDetails?.collegeName?.trim() ?? '',
+    academicYear: academicDetails?.academicYear?.trim() ?? '',
+  }
+}
+
+function parsePlansSnapshot(
+  plans: StudentDocument['plans'],
+): StudentPlansSnapshot | null {
+  if (!plans || typeof plans !== 'object') return null
+  if (!plans.planId && !plans.planName) return null
+  return plans
+}
+
 export function mapStudentDoc(snapshot: QueryDocumentSnapshot<DocumentData>): Student {
   const data = snapshot.data() as StudentDocument
 
@@ -55,6 +94,54 @@ export function mapStudentDoc(snapshot: QueryDocumentSnapshot<DocumentData>): St
     planName: parsePlanName(data.plans),
     isActiveUser: data.isActiveUser === true,
   }
+}
+
+export function mapStudentDetailDoc(
+  snapshot: QueryDocumentSnapshot<DocumentData>,
+): StudentDetail {
+  const data = snapshot.data() as StudentDocument
+  const baseStudent = mapStudentDoc(snapshot)
+
+  return {
+    ...baseStudent,
+    state: parseStudentState(data.state),
+    academicDetails: parseAcademicDetails(data.academicDetails),
+    plans: parsePlansSnapshot(data.plans),
+  }
+}
+
+export async function fetchStudentById(uid: string): Promise<StudentDetail | null> {
+  const docRef = doc(db, STUDENTS_COLLECTION, uid)
+  const docSnap = await getDoc(docRef)
+
+  if (!docSnap.exists()) return null
+
+  return mapStudentDetailDoc(docSnap as QueryDocumentSnapshot<DocumentData>)
+}
+
+export async function updateStudent(uid: string, input: UpdateStudentInput): Promise<void> {
+  const docRef = doc(db, STUDENTS_COLLECTION, uid)
+
+  const payload: Record<string, unknown> = {
+    name: input.name.trim(),
+    state: input.state.trim(),
+    academicDetails: {
+      collegeState: input.academicDetails.collegeState.trim(),
+      collegeName: input.academicDetails.collegeName.trim(),
+      academicYear: input.academicDetails.academicYear.trim(),
+    },
+    plans: input.plans ? input.plans : deleteField(),
+  }
+
+  if (input.email !== undefined) {
+    payload.email = input.email.trim()
+  }
+
+  if (input.phone !== undefined) {
+    payload.phone = input.phone?.trim() ? input.phone.trim() : null
+  }
+
+  await updateDoc(docRef, payload)
 }
 
 export interface FetchStudentsPageResult {

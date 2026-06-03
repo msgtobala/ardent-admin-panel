@@ -78,6 +78,11 @@ export async function fetchPlansByType(planType: FirestorePlanType): Promise<Pla
   return sortPlans(snapshot.docs.map(mapPlanDoc))
 }
 
+export async function fetchActivePlans(): Promise<Plan[]> {
+  const snapshot = await getDocs(query(plansRef, where('isActive', '==', true)))
+  return sortPlans(snapshot.docs.map(mapPlanDoc))
+}
+
 export async function updatePlanIsActive(id: string, isActive: boolean): Promise<void> {
   await updateDoc(doc(db, PLANS_COLLECTION, id), {
     isActive,

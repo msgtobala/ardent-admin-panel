@@ -1,9 +1,12 @@
+import { useState } from 'react'
+import { EditStudentModal } from '@/components/students/EditStudentModal'
 import { StudentsPageHeader } from '@/components/students/StudentsPageHeader'
 import { StudentsTable } from '@/components/students/StudentsTable'
 import { useStudents } from '@/hooks/useStudents'
 import type { Student } from '@/types/student'
 
 export default function StudentsPage() {
+  const [editingStudentUid, setEditingStudentUid] = useState<string | null>(null)
   const {
     students,
     searchInput,
@@ -27,10 +30,19 @@ export default function StudentsPage() {
     handleNext,
     handlePrevious,
     handleRetry,
+    refreshStudents,
   } = useStudents()
 
-  function handleEditStudent(_student: Student) {
-    // Edit flow will be implemented in a follow-up.
+  function handleEditStudent(student: Student) {
+    setEditingStudentUid(student.uid)
+  }
+
+  function handleCloseEditModal() {
+    setEditingStudentUid(null)
+  }
+
+  function handleStudentSaved() {
+    refreshStudents()
   }
 
   function handleOpenStudentDetails(_student: Student) {
@@ -68,6 +80,13 @@ export default function StudentsPage() {
         onRetry={handleRetry}
         onEdit={handleEditStudent}
         onOpenDetails={handleOpenStudentDetails}
+      />
+      <EditStudentModal
+        key={editingStudentUid ? `edit-student-${editingStudentUid}` : 'edit-student-closed'}
+        isOpen={editingStudentUid !== null}
+        studentUid={editingStudentUid}
+        onClose={handleCloseEditModal}
+        onSaved={handleStudentSaved}
       />
     </div>
   )

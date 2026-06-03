@@ -141,6 +141,10 @@ export function useStudents() {
     loadPage(pageCursors[pageIndex] ?? null)
   }, [loadPage, pageCursors, pageIndex])
 
+  const refreshStudents = useCallback(() => {
+    loadPage(pageCursors[pageIndex] ?? null)
+  }, [loadPage, pageCursors, pageIndex])
+
   const isInitialLoading = isLoading && students.length === 0 && !error
   const isPageLoading = isLoading && students.length > 0
 
@@ -167,5 +171,6 @@ export function useStudents() {
     handleNext,
     handlePrevious,
     handleRetry,
+    refreshStudents,
   }
 }

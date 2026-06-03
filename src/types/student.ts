@@ -1,3 +1,9 @@
+export interface StudentAcademicDetails {
+  collegeState: string
+  collegeName: string
+  academicYear: string
+}
+
 export interface StudentPlansSnapshot {
   planId?: string
   planName?: string
@@ -18,6 +24,12 @@ export interface Student {
   isActiveUser: boolean
 }
 
+export interface StudentDetail extends Student {
+  state: string
+  academicDetails: StudentAcademicDetails
+  plans: StudentPlansSnapshot | null
+}
+
 export interface StudentDocument {
   uid?: string
   email?: string
@@ -25,9 +37,24 @@ export interface StudentDocument {
   name?: string | null
   authenticationMethod?: string
   isActiveUser?: boolean
+  state?: unknown
+  academicDetails?: {
+    collegeState?: string
+    collegeName?: string
+    academicYear?: string
+  }
   plans?: StudentPlansSnapshot
 }
 
 export type StudentSortField = 'name' | 'planName'
 
 export type { SortDirection } from '@/types/table'
+
+export interface UpdateStudentInput {
+  name: string
+  email?: string
+  phone?: string | null
+  state: string
+  academicDetails: StudentAcademicDetails
+  plans: StudentPlansSnapshot | null
+}

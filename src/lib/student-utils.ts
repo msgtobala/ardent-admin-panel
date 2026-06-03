@@ -13,6 +13,26 @@ export function isPhoneAuthenticationMethod(authenticationMethod: string): boole
   return normalizeAuthenticationMethodKey(authenticationMethod) === 'phone'
 }
 
+export function isEmailAuthenticationMethod(authenticationMethod: string): boolean {
+  const normalized = normalizeAuthenticationMethodKey(authenticationMethod)
+
+  if (normalized === 'google' || normalized.includes('google')) return true
+
+  return (
+    normalized === 'emailpassword' ||
+    normalized === 'email' ||
+    normalized === 'password'
+  )
+}
+
+export function canEditStudentEmail(authenticationMethod: string): boolean {
+  return !isEmailAuthenticationMethod(authenticationMethod)
+}
+
+export function canEditStudentPhone(authenticationMethod: string): boolean {
+  return !isPhoneAuthenticationMethod(authenticationMethod)
+}
+
 export function getAuthenticationMethodDisplay(
   authenticationMethod: string,
 ): AuthenticationMethodDisplay {
