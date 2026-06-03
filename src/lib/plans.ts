@@ -5,6 +5,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -100,6 +101,8 @@ export interface UpsertPlanInput {
   durationMonths: number
   description: string[]
   planModules: string[]
+  badge: string
+  validUntilDate: Date | null
   isActive: boolean
   displayOrder: number
 }
@@ -118,7 +121,10 @@ export async function createPlan(input: UpsertPlanInput): Promise<string> {
     planModules: input.planModules,
     description: input.description,
     displayOrder: input.displayOrder,
-    badge: '',
+    badge: input.badge,
+    validUntilDate: input.validUntilDate
+      ? Timestamp.fromDate(input.validUntilDate)
+      : null,
     isActive: input.isActive,
     createdBy: '',
     updatedBy: '',
@@ -137,6 +143,8 @@ export interface UpdatePlanInput {
   durationMonths: number
   description: string[]
   planModules: string[]
+  badge: string
+  validUntilDate: Date | null
   isActive: boolean
 }
 
@@ -150,6 +158,10 @@ export async function updatePlan(id: string, input: UpdatePlanInput): Promise<vo
     durationMonths: input.durationMonths,
     description: input.description,
     planModules: input.planModules,
+    badge: input.badge,
+    validUntilDate: input.validUntilDate
+      ? Timestamp.fromDate(input.validUntilDate)
+      : null,
     isActive: input.isActive,
     updatedAt: serverTimestamp(),
   })

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { normalizePlanModules, PLAN_MODULE_OPTIONS } from '@/config/plan-modules'
 import {
   PLAN_SECTIONS,
   normalizePlanType,
   type FirestorePlanType,
 } from '@/config/plan-sections'
+import { fromDateInputValue, toDateInputValue } from '@/lib/format-date'
 import {
   createPlan,
   getNextDisplayOrder,
@@ -13,6 +15,7 @@ import type { Plan } from '@/types/plan'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { MultiSelectField } from '@/components/ui/MultiSelectField'
 import { SelectField } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 import {
@@ -34,7 +37,10 @@ function getInitialFormState(plan: Plan | null) {
     originalPrice: plan?.originalPrice?.toString() ?? '',
     sellingPrice: plan?.sellingPrice?.toString() ?? '',
     durationMonths: plan?.durationMonths?.toString() ?? '',
+    planModules: normalizePlanModules(plan?.planModules ?? []),
     descriptions: plan?.description?.length ? [...plan.description] : [],
+    badge: plan?.badge ?? '',
+    validUntilDate: toDateInputValue(plan?.validUntilDate ?? null),
     isActive: plan?.isActive ?? true,
   }
 }
@@ -50,7 +56,10 @@ export function EditPlanModal({
   const [originalPrice, setOriginalPrice] = useState('')
   const [sellingPrice, setSellingPrice] = useState('')
   const [durationMonths, setDurationMonths] = useState('')
+  const [planModules, setPlanModules] = useState<string[]>([])
   const [descriptions, setDescriptions] = useState<string[]>([])
+  const [badge, setBadge] = useState('')
+  const [validUntilDate, setValidUntilDate] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [planNameError, setPlanNameError] = useState<string | undefined>()
   const [planTypeError, setPlanTypeError] = useState<string | undefined>()
@@ -69,7 +78,10 @@ export function EditPlanModal({
     setOriginalPrice(initial.originalPrice)
     setSellingPrice(initial.sellingPrice)
     setDurationMonths(initial.durationMonths)
+    setPlanModules(initial.planModules)
     setDescriptions(initial.descriptions)
+    setBadge(initial.badge)
+    setValidUntilDate(initial.validUntilDate)
     setIsActive(initial.isActive)
     setPlanNameError(undefined)
     setPlanTypeError(undefined)
@@ -150,7 +162,9 @@ export function EditPlanModal({
       sellingPrice: parseNumber(sellingPrice),
       durationMonths: Math.max(0, Math.round(parseNumber(durationMonths))),
       description: normalizePlanDescriptions(descriptions),
-      planModules: plan?.planModules ?? [],
+      planModules,
+      badge: badge.trim(),
+      validUntilDate: fromDateInputValue(validUntilDate),
       isActive,
     }
 
@@ -283,14 +297,43 @@ export function EditPlanModal({
             />
           </div>
 
+          <div className="grid gap-gutter sm:grid-cols-2">
+            <TextField
+              id="plan-duration-months"
+              label="Duration (months)"
+              type="number"
+              min={0}
+              value={durationMonths}
+              disabled={isSubmitting}
+              onChange={(event) => setDurationMonths(event.target.value)}
+            />
+            <TextField
+              id="plan-valid-until"
+              label="Valid Until"
+              type="date"
+              value={validUntilDate}
+              disabled={isSubmitting}
+              onChange={(event) => setValidUntilDate(event.target.value)}
+            />
+          </div>
+
           <TextField
-            id="plan-duration-months"
-            label="Duration (months)"
-            type="number"
-            min={0}
-            value={durationMonths}
+            id="plan-badge"
+            label="Badge"
+            value={badge}
             disabled={isSubmitting}
-            onChange={(event) => setDurationMonths(event.target.value)}
+            placeholder="Optional badge label"
+            onChange={(event) => setBadge(event.target.value)}
+          />
+
+          <MultiSelectField
+            id="plan-modules"
+            label="Plan Modules"
+            values={planModules}
+            options={PLAN_MODULE_OPTIONS}
+            disabled={isSubmitting}
+            placeholder="Select modules"
+            onChange={setPlanModules}
           />
 
           <PlanDescriptionList
