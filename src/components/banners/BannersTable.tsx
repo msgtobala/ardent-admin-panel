@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { ActiveToggle } from './ActiveToggle'
 import { BannerImageModal } from './BannerImageModal'
 import { BannerImagePreview } from './BannerImagePreview'
@@ -42,8 +43,8 @@ const BANNER_COLUMN_WIDTHS = [
   'w-[140px]',
   undefined,
   'w-[120px]',
-  'w-[180px]',
   'w-[160px]',
+  'w-[220px]',
 ]
 
 function BannersTableSkeletonRows() {
@@ -108,8 +109,12 @@ function BannerRow({
       <TableCell className="whitespace-nowrap text-body-md text-text-black">
         {formatBannerDate(banner.createdAt)}
       </TableCell>
-      <TableCell>
-        <div className="flex items-center justify-center gap-2">
+      <TableCell className="px-3">
+        <div className="flex items-center justify-center gap-1.5">
+          <CopyIdButton
+            value={banner.id}
+            ariaLabel={`Copy banner id ${banner.id}`}
+          />
           <button
             type="button"
             aria-label={`View banner image for ${banner.id}`}
@@ -222,7 +227,9 @@ export function BannersTable({
               sortDirection={sortDirection}
               onSort={onSort}
             />
-            <TableHeadCell align="center">Actions</TableHeadCell>
+            <TableHeadCell align="center" className="px-3">
+              Actions
+            </TableHeadCell>
           </TableHeaderRow>
         }
       >

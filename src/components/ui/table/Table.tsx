@@ -1,8 +1,5 @@
 import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react'
-import {
-  DEFAULT_TABLE_MIN_WIDTH,
-  TABLE_ROW_HEIGHT_CLASS,
-} from '@/types/table'
+import { TABLE_ROW_HEIGHT_CLASS } from '@/types/table'
 
 interface TableProps {
   children: ReactNode
@@ -36,7 +33,7 @@ export function TableScrollArea({
   loadingOverlay,
 }: TableScrollAreaProps) {
   return (
-    <div className="relative overflow-x-auto">
+    <div className="relative overflow-hidden">
       {isPageLoading ? loadingOverlay : null}
       {children}
     </div>
@@ -51,13 +48,13 @@ interface TableElementProps {
 
 export function TableElement({
   children,
-  minWidth = DEFAULT_TABLE_MIN_WIDTH,
+  minWidth,
   columnWidths,
 }: TableElementProps) {
   return (
     <table
       className="w-full table-fixed border-collapse"
-      style={{ minWidth }}
+      style={minWidth ? { minWidth } : undefined}
     >
       {columnWidths ? (
         <colgroup>

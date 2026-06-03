@@ -1,5 +1,6 @@
 import { FACULTIES_PAGE_SIZE } from '@/lib/faculties'
 import type { Faculty, FacultySortField, SortDirection } from '@/types/faculty'
+import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import {
   DataTable,
@@ -36,7 +37,7 @@ const FACULTY_COLUMN_WIDTHS = [
   undefined,
   'w-[220px]',
   undefined,
-  'w-[120px]',
+  'w-[180px]',
 ]
 
 const actionButtonClassName =
@@ -98,8 +99,12 @@ function FacultyRow({
       >
         <span className="block truncate">{faculty.bio || '—'}</span>
       </TableCell>
-      <TableCell>
-        <div className="flex items-center justify-center gap-2">
+      <TableCell className="px-3">
+        <div className="flex items-center justify-center gap-1.5">
+          <CopyIdButton
+            value={faculty.facultyId}
+            ariaLabel={`Copy faculty id ${faculty.facultyId}`}
+          />
           <button
             type="button"
             aria-label={`Edit faculty ${faculty.id}`}
@@ -189,7 +194,9 @@ export function FacultiesTable({
             onSort={onSort}
           />
           <TableHeadCell>Bio</TableHeadCell>
-          <TableHeadCell align="center">Actions</TableHeadCell>
+          <TableHeadCell align="center" className="px-3">
+            Actions
+          </TableHeadCell>
         </TableHeaderRow>
       }
     >
