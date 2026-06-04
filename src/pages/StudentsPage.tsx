@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AddStudentModal } from '@/components/students/AddStudentModal'
 import { EditStudentModal } from '@/components/students/EditStudentModal'
 import { StudentsPageHeader } from '@/components/students/StudentsPageHeader'
 import { StudentsTable } from '@/components/students/StudentsTable'
@@ -6,6 +7,7 @@ import { useStudents } from '@/hooks/useStudents'
 import type { Student } from '@/types/student'
 
 export default function StudentsPage() {
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
   const [editingStudentUid, setEditingStudentUid] = useState<string | null>(null)
   const {
     students,
@@ -33,6 +35,14 @@ export default function StudentsPage() {
     refreshStudents,
   } = useStudents()
 
+  function handleAddStudent() {
+    setIsAddStudentOpen(true)
+  }
+
+  function handleCloseAddModal() {
+    setIsAddStudentOpen(false)
+  }
+
   function handleEditStudent(student: Student) {
     setEditingStudentUid(student.uid)
   }
@@ -53,6 +63,7 @@ export default function StudentsPage() {
         onSearchInputChange={handleSearchInputChange}
         onSearchSubmit={handleSearchSubmit}
         onSearchClear={handleSearchClear}
+        onAddStudent={handleAddStudent}
         disabled={isInitialLoading}
         isSearching={isPageLoading && isSearchActive}
       />
@@ -75,6 +86,12 @@ export default function StudentsPage() {
         onPrevious={handlePrevious}
         onRetry={handleRetry}
         onEdit={handleEditStudent}
+      />
+      <AddStudentModal
+        key={isAddStudentOpen ? 'add-student-open' : 'add-student-closed'}
+        isOpen={isAddStudentOpen}
+        onClose={handleCloseAddModal}
+        onSaved={handleStudentSaved}
       />
       <EditStudentModal
         key={editingStudentUid ? `edit-student-${editingStudentUid}` : 'edit-student-closed'}

@@ -10,6 +10,8 @@ import GrandTestsPage from '@/pages/GrandTestsPage'
 import LoginPage from '@/pages/LoginPage'
 import PlansPage from '@/pages/PlansPage'
 import QBanksPage from '@/pages/QBanksPage'
+import ClinicalVignettesPage from '@/pages/ClinicalVignettesPage'
+import TenMinsConceptPage from '@/pages/TenMinsConceptPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
 import StudentsPage from '@/pages/StudentsPage'
 
@@ -71,6 +73,14 @@ export const router = createBrowserRouter([
       {
         path: '3-min-challenges',
         element: <ThreeMinChallengesPage />,
+      },
+      {
+        path: '10-mins-concept',
+        element: <TenMinsConceptPage />,
+      },
+      {
+        path: 'clinical-vignettes',
+        element: <ClinicalVignettesPage />,
       },
     ],
   },

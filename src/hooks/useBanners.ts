@@ -2,7 +2,9 @@ import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import {
+  ACTIVE_BANNER_DELETE_MESSAGE,
   BANNERS_PAGE_SIZE,
+  deleteBanner,
   fetchBannersPage,
   getBannersCount,
   updateBannerIsActive,
@@ -107,6 +109,23 @@ export function useBanners() {
     setPageCursors([null])
   }, [])
 
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const banner = banners.find((item) => item.id === id)
+      if (banner?.isActive) {
+        throw new Error(ACTIVE_BANNER_DELETE_MESSAGE)
+      }
+
+      try {
+        await deleteBanner(id)
+        refreshBanners()
+      } catch {
+        throw new Error('Failed to delete banner')
+      }
+    },
+    [banners, refreshBanners],
+  )
+
   const handleToggleIsActive = useCallback(
     async (id: string, isActive: boolean) => {
       const previousBanners = banners
@@ -148,6 +167,7 @@ export function useBanners() {
     handlePrevious,
     handleRetry,
     handleToggleIsActive,
+    handleDelete,
     refreshBanners,
   }
 }

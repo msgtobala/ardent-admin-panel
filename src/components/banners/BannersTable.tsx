@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BANNERS_PAGE_SIZE } from '@/lib/banners'
+import { ACTIVE_BANNER_DELETE_MESSAGE, BANNERS_PAGE_SIZE } from '@/lib/banners'
 import { formatBannerDate } from '@/lib/format-date'
 import type { Banner, BannerSortField, SortDirection } from '@/types/banner'
 import {
@@ -36,7 +36,11 @@ interface BannersTableProps {
   onRetry: () => void
   onToggleIsActive: (id: string, isActive: boolean) => void
   onEdit: (banner: Banner) => void
+  onDelete: (banner: Banner) => void
 }
+
+const actionButtonClassName =
+  'cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
 
 const BANNER_COLUMN_WIDTHS = [
   'w-[140px]',
@@ -72,11 +76,13 @@ function BannerRow({
   banner,
   onView,
   onEdit,
+  onDelete,
   onToggleIsActive,
 }: {
   banner: Banner
   onView: (banner: Banner) => void
   onEdit: (banner: Banner) => void
+  onDelete: (banner: Banner) => void
   onToggleIsActive: (id: string, isActive: boolean) => void
 }) {
   return (
@@ -85,6 +91,9 @@ function BannerRow({
         <BannerImagePreview
           imageUrl={banner.imageUrl}
           altText={banner.link || 'Banner preview'}
+          onClick={
+            banner.imageUrl ? () => onView(banner) : undefined
+          }
         />
       </TableCell>
       <TableCell>
@@ -116,26 +125,36 @@ function BannerRow({
           />
           <button
             type="button"
-            aria-label={`View banner image for ${banner.id}`}
-            onClick={() => onView(banner)}
-            className="cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            aria-label={`Edit banner ${banner.id}`}
+            onClick={() => onEdit(banner)}
+            className={actionButtonClassName}
           >
             <MaterialIcon
-              name="visibility"
+              name="edit"
               size={16}
               className="text-on-surface-variant"
             />
           </button>
           <button
             type="button"
-            aria-label={`Edit banner ${banner.id}`}
-            onClick={() => onEdit(banner)}
-            className="cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            aria-label={
+              banner.isActive
+                ? `Cannot delete active banner ${banner.id}`
+                : `Delete banner ${banner.id}`
+            }
+            title={banner.isActive ? ACTIVE_BANNER_DELETE_MESSAGE : undefined}
+            onClick={() => onDelete(banner)}
+            disabled={banner.isActive}
+            className={`${actionButtonClassName} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <MaterialIcon
-              name="edit"
+              name="delete"
               size={16}
-              className="text-on-surface-variant"
+              className={
+                banner.isActive
+                  ? 'text-on-surface-variant'
+                  : 'text-primary-action'
+              }
             />
           </button>
           <ActiveToggle
@@ -167,6 +186,7 @@ export function BannersTable({
   onRetry,
   onToggleIsActive,
   onEdit,
+  onDelete,
 }: BannersTableProps) {
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null)
 
@@ -236,6 +256,7 @@ export function BannersTable({
             banner={banner}
             onView={handleViewBanner}
             onEdit={onEdit}
+            onDelete={onDelete}
             onToggleIsActive={onToggleIsActive}
           />
         ))}

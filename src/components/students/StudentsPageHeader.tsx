@@ -8,6 +8,7 @@ interface StudentsPageHeaderProps {
   onSearchInputChange: (value: string) => void
   onSearchSubmit: () => void
   onSearchClear: () => void
+  onAddStudent?: () => void
   disabled?: boolean
   isSearching?: boolean
 }
@@ -21,6 +22,7 @@ export function StudentsPageHeader({
   onSearchInputChange,
   onSearchSubmit,
   onSearchClear,
+  onAddStudent,
   disabled = false,
   isSearching = false,
 }: StudentsPageHeaderProps) {
@@ -34,12 +36,23 @@ export function StudentsPageHeader({
 
   return (
     <div className="flex flex-col gap-gutter">
-      <div className="flex max-w-[672px] flex-col gap-2">
-        <h1 className="text-section-title text-on-surface">Students</h1>
-        <p className="text-body-md text-on-surface-variant">
-          View and manage student accounts, contact details, and active plans across
-          the Ardent MDS Plus app
-        </p>
+      <div className="flex items-end justify-between gap-gutter">
+        <div className="flex max-w-[672px] flex-col gap-2">
+          <h1 className="text-section-title text-on-surface">Students</h1>
+          <p className="text-body-md text-on-surface-variant">
+            View and manage student accounts, contact details, and active plans across
+            the Ardent MDS Plus app
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={onAddStudent}
+          disabled={disabled}
+          className="shrink-0 gap-2 px-6 py-3 text-body-lg font-semibold shadow-[0_10px_15px_-3px_rgba(255,73,0,0.2),0_4px_6px_-4px_rgba(255,73,0,0.2)]"
+        >
+          <MaterialIcon name="add" size={18} />
+          Add Student
+        </Button>
       </div>
 
       <form

@@ -58,3 +58,25 @@ export interface UpdateStudentInput {
   academicDetails: StudentAcademicDetails
   plans: StudentPlansSnapshot | null
 }
+
+export interface CreateStudentInput {
+  name: string
+  email: string
+  state?: string
+  academicDetails?: Partial<StudentAcademicDetails>
+  plans: CreateStudentPlanInput
+}
+
+export interface CreateStudentPlanInput {
+  planId: string
+  planName: string
+  planModules: string[]
+  planExpiryDate: string | null
+  planPurchaseDate: null
+  purchaseId: null
+}
+
+export interface CreateStudentResult {
+  uid: string
+  passwordResetEmailSent: boolean
+}

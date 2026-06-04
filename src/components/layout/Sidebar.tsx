@@ -2,7 +2,8 @@ import { signOut } from 'firebase/auth'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ardentLogo from '@/assets/ardent-logo.png'
-import { NAV_ITEMS } from '@/config/navigation'
+import { NAV_COLLAPSIBLE_GROUPS, NAV_ITEMS } from '@/config/navigation'
+import { SidebarNavGroup } from './SidebarNavGroup'
 import { auth } from '@/lib/firebase'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -53,6 +54,9 @@ export function Sidebar() {
             <MaterialIcon name={item.icon} size={18} />
             {item.label}
           </NavLink>
+        ))}
+        {NAV_COLLAPSIBLE_GROUPS.map((group) => (
+          <SidebarNavGroup key={group.label} group={group} />
         ))}
       </nav>
 

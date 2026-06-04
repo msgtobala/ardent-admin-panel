@@ -1,5 +1,5 @@
 import { listAll, ref, uploadBytes } from 'firebase/storage'
-import { makeBannerImagePublic } from './make-banner-image-public'
+import { makeStorageAssetPublic } from './make-storage-asset-public'
 import { storage } from './firebase'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
@@ -66,5 +66,5 @@ export async function uploadBannerImage(file: File): Promise<string> {
   const storageRef = ref(storage, storagePath)
 
   await uploadBytes(storageRef, file)
-  return makeBannerImagePublic(storagePath)
+  return makeStorageAssetPublic(storagePath)
 }

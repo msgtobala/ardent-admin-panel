@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDocs,
@@ -30,6 +31,9 @@ import { db } from './firebase'
  */
 export const BANNERS_COLLECTION = 'banners'
 export const BANNERS_PAGE_SIZE = 10
+
+export const ACTIVE_BANNER_DELETE_MESSAGE =
+  'Deactivate the banner before deleting it.'
 
 const bannersRef = collection(db, BANNERS_COLLECTION)
 
@@ -142,4 +146,8 @@ export async function updateBanner(
     isActive: input.isActive,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function deleteBanner(id: string): Promise<void> {
+  await deleteDoc(doc(db, BANNERS_COLLECTION, id))
 }

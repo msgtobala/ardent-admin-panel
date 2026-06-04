@@ -1,12 +1,54 @@
+export interface NavBreadcrumbs {
+  parent: string
+  current: string
+}
+
 export interface NavItem {
   label: string
   path: string
   icon: string
-  breadcrumbs: {
-    parent: string
-    current: string
-  }
+  breadcrumbs: NavBreadcrumbs
 }
+
+export interface NavChildItem {
+  label: string
+  path: string
+  icon: string
+  breadcrumbs: NavBreadcrumbs
+}
+
+export interface NavCollapsibleGroup {
+  label: string
+  icon: string
+  children: NavChildItem[]
+}
+
+export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
+  {
+    label: 'Nuggets',
+    icon: 'menu_book',
+    children: [
+      {
+        label: '3 Mins Challenge',
+        path: '/3-min-challenges',
+        icon: 'timer',
+        breadcrumbs: { parent: '3 Mins Challenge', current: 'Overview' },
+      },
+      {
+        label: '10 Mins Concept',
+        path: '/10-mins-concept',
+        icon: 'schedule',
+        breadcrumbs: { parent: '10 Mins Concept', current: 'Overview' },
+      },
+      {
+        label: 'Clinical Vignettes',
+        path: '/clinical-vignettes',
+        icon: 'clinical_notes',
+        breadcrumbs: { parent: 'Clinical Vignettes', current: 'Overview' },
+      },
+    ],
+  },
+]
 
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -51,19 +93,34 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'quiz',
     breadcrumbs: { parent: 'QBanks', current: 'Overview' },
   },
-  {
-    label: '3 Min Challenges',
-    path: '/3-min-challenges',
-    icon: 'timer',
-    breadcrumbs: { parent: '3 Min Challenges', current: 'Overview' },
-  },
 ]
 
-export function getBreadcrumbs(pathname: string): NavItem['breadcrumbs'] {
-  const item = NAV_ITEMS.find((navItem) => navItem.path === pathname)
-  return item?.breadcrumbs ?? { parent: 'Dashboard', current: 'Overview' }
+function findNavChildByPath(pathname: string): NavChildItem | undefined {
+  for (const group of NAV_COLLAPSIBLE_GROUPS) {
+    const child = group.children.find((item) => item.path === pathname)
+    if (child) return child
+  }
+  return undefined
 }
 
-export function getNavItemByPath(pathname: string): NavItem | undefined {
-  return NAV_ITEMS.find((navItem) => navItem.path === pathname)
+export function getBreadcrumbs(pathname: string): NavBreadcrumbs {
+  const item = NAV_ITEMS.find((navItem) => navItem.path === pathname)
+  if (item) return item.breadcrumbs
+
+  const child = findNavChildByPath(pathname)
+  if (child) return child.breadcrumbs
+
+  return { parent: 'Dashboard', current: 'Overview' }
+}
+
+export function getNavItemByPath(
+  pathname: string,
+): Pick<NavItem, 'path' | 'label'> | undefined {
+  const item = NAV_ITEMS.find((navItem) => navItem.path === pathname)
+  if (item) return item
+
+  const child = findNavChildByPath(pathname)
+  if (child) return { path: child.path, label: child.label }
+
+  return undefined
 }

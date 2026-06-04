@@ -102,11 +102,6 @@ export function TopNav() {
                 LMS Manager
               </span>
             </span>
-            <MaterialIcon
-              name="keyboard_arrow_down"
-              size={18}
-              className="text-on-surface-variant"
-            />
           </button>
         </div>
       </div>

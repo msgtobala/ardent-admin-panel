@@ -1,18 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ACADEMIC_YEAR_OPTIONS } from '@/config/academic-years'
+import { createStudent } from '@/lib/create-student'
 import { fetchActivePlans } from '@/lib/plans'
+import { isFreePlan } from '@/lib/plan-utils'
 import {
-  buildStudentPlanSnapshot,
+  buildCreateStudentPlanSnapshot,
   formatPlanOptionLabel,
 } from '@/lib/student-plan-assignment'
-import {
-  canEditStudentEmail,
-  canEditStudentPhone,
-} from '@/lib/student-utils'
-import { fetchStateOptions, stateOptionsToSelectOptions, type StateOption } from '@/lib/states'
-import { fetchStudentById, updateStudent } from '@/lib/students'
+import { fetchStateOptions, stateOptionsToSelectOptions } from '@/lib/states'
 import type { Plan } from '@/types/plan'
-import type { StudentDetail } from '@/types/student'
 import { StudentCollegeNameSelect } from '@/components/students/StudentCollegeNameSelect'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
@@ -20,92 +16,46 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SelectField } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 
-interface EditStudentModalProps {
+interface AddStudentModalProps {
   isOpen: boolean
-  studentUid: string | null
   onClose: () => void
   onSaved: () => void
 }
 
-const NO_PLAN_VALUE = ''
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function resolveStateSelectValue(value: string, states: StateOption[]): string {
-  const trimmedValue = value.trim()
-  if (!trimmedValue) return ''
-
-  const byCode = states.find((state) => state.code === trimmedValue)
-  if (byCode) return byCode.code
-
-  const byName = states.find(
-    (state) => state.name.toLowerCase() === trimmedValue.toLowerCase(),
-  )
-  if (byName) return byName.code
-
-  return trimmedValue
+function resolveDefaultPlanId(plans: Plan[]): string {
+  const freePlan = plans.find(isFreePlan)
+  return freePlan?.planId ?? plans[0]?.planId ?? ''
 }
 
-function getInitialFormState(
-  student: StudentDetail | null,
-  states: StateOption[],
-) {
-  return {
-    name: student?.name ?? '',
-    email: student?.email ?? '',
-    phone: student?.phone ?? '',
-    state: resolveStateSelectValue(student?.state ?? '', states),
-    collegeState: resolveStateSelectValue(
-      student?.academicDetails.collegeState ?? '',
-      states,
-    ),
-    collegeName: student?.academicDetails.collegeName ?? '',
-    academicYear: student?.academicDetails.academicYear ?? '',
-    selectedPlanId: student?.plans?.planId ?? NO_PLAN_VALUE,
-  }
-}
-
-export function EditStudentModal({
-  isOpen,
-  studentUid,
-  onClose,
-  onSaved,
-}: EditStudentModalProps) {
+export function AddStudentModal({ isOpen, onClose, onSaved }: AddStudentModalProps) {
   const { showSnackbar } = useSnackbar()
-  const [student, setStudent] = useState<StudentDetail | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [stateOptions, setStateOptions] = useState<{ value: string; label: string }[]>([])
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
   const [state, setState] = useState('')
   const [collegeState, setCollegeState] = useState('')
   const [collegeName, setCollegeName] = useState('')
   const [academicYear, setAcademicYear] = useState('')
-  const [selectedPlanId, setSelectedPlanId] = useState(NO_PLAN_VALUE)
+  const [selectedPlanId, setSelectedPlanId] = useState('')
   const [nameError, setNameError] = useState<string | undefined>()
   const [emailError, setEmailError] = useState<string | undefined>()
+  const [planError, setPlanError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [loadError, setLoadError] = useState<string | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const planSelectOptions = useMemo(
-    () => [
-      { value: NO_PLAN_VALUE, label: 'No plan assigned' },
-      ...plans.map((plan) => ({
+    () =>
+      plans.map((plan) => ({
         value: plan.planId,
         label: formatPlanOptionLabel(plan),
       })),
-    ],
     [plans],
   )
-
-  const canEditEmail = student
-    ? canEditStudentEmail(student.authenticationMethod)
-    : false
-  const canEditPhone = student
-    ? canEditStudentPhone(student.authenticationMethod)
-    : false
 
   const handleClose = useCallback(() => {
     if (isSubmitting) return
@@ -129,20 +79,19 @@ export function EditStudentModal({
   }, [isOpen, handleClose])
 
   useEffect(() => {
-    if (!isOpen || !studentUid) {
-      setStudent(null)
+    if (!isOpen) {
       setPlans([])
       setStateOptions([])
       setName('')
       setEmail('')
-      setPhone('')
       setState('')
       setCollegeState('')
       setCollegeName('')
       setAcademicYear('')
-      setSelectedPlanId(NO_PLAN_VALUE)
+      setSelectedPlanId('')
       setNameError(undefined)
       setEmailError(undefined)
+      setPlanError(undefined)
       setFormError(undefined)
       setLoadError(undefined)
       setIsLoading(false)
@@ -150,58 +99,42 @@ export function EditStudentModal({
       return
     }
 
-    const uid = studentUid
     let isCancelled = false
 
-    async function loadModalData() {
+    async function loadFormOptions() {
       setIsLoading(true)
       setLoadError(undefined)
       setFormError(undefined)
       setNameError(undefined)
+      setEmailError(undefined)
+      setPlanError(undefined)
 
       try {
-        const [studentResult, planResults, stateResults] = await Promise.all([
-          fetchStudentById(uid),
+        const [planResults, stateResults] = await Promise.all([
           fetchActivePlans(),
           fetchStateOptions(),
         ])
 
         if (isCancelled) return
 
-        if (!studentResult) {
-          setLoadError('Student not found. They may have been removed.')
-          setStudent(null)
-          return
-        }
-
-        const initial = getInitialFormState(studentResult, stateResults)
-        setStudent(studentResult)
         setPlans(planResults)
         setStateOptions(stateOptionsToSelectOptions(stateResults))
-        setName(initial.name)
-        setEmail(initial.email)
-        setPhone(initial.phone)
-        setState(initial.state)
-        setCollegeState(initial.collegeState)
-        setCollegeName(initial.collegeName)
-        setAcademicYear(initial.academicYear)
-        setSelectedPlanId(initial.selectedPlanId)
+        setSelectedPlanId(resolveDefaultPlanId(planResults))
       } catch {
         if (!isCancelled) {
-          setLoadError('Failed to load student details. Please try again.')
-          setStudent(null)
+          setLoadError('Failed to load form options. Please try again.')
         }
       } finally {
         if (!isCancelled) setIsLoading(false)
       }
     }
 
-    loadModalData()
+    loadFormOptions()
 
     return () => {
       isCancelled = true
     }
-  }, [isOpen, studentUid])
+  }, [isOpen])
 
   function validate(): boolean {
     let valid = true
@@ -213,57 +146,76 @@ export function EditStudentModal({
       setNameError(undefined)
     }
 
-    if (canEditEmail) {
-      const trimmedEmail = email.trim()
-      if (trimmedEmail && !EMAIL_PATTERN.test(trimmedEmail)) {
-        setEmailError('Enter a valid email address')
-        valid = false
-      } else {
-        setEmailError(undefined)
-      }
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setEmailError('Email is required')
+      valid = false
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setEmailError('Enter a valid email address')
+      valid = false
+    } else {
+      setEmailError(undefined)
+    }
+
+    if (!selectedPlanId || !plans.some((plan) => plan.planId === selectedPlanId)) {
+      setPlanError('Select a plan')
+      valid = false
+    } else {
+      setPlanError(undefined)
     }
 
     return valid
   }
 
-  async function handleSave() {
-    if (!studentUid || !student || !validate()) return
+  async function handleCreate() {
+    if (!validate()) return
+
+    const selectedPlan = plans.find((plan) => plan.planId === selectedPlanId)
+    if (!selectedPlan) {
+      setPlanError('Select a plan')
+      return
+    }
 
     setFormError(undefined)
     setIsSubmitting(true)
 
-    const selectedPlan = plans.find((plan) => plan.planId === selectedPlanId)
-    const nextPlans =
-      selectedPlanId && selectedPlan
-        ? buildStudentPlanSnapshot(selectedPlan, student.plans)
-        : null
-
     try {
-      await updateStudent(studentUid, {
+      const result = await createStudent({
         name,
-        ...(canEditEmail ? { email } : {}),
-        ...(canEditPhone ? { phone: phone.trim() || null } : {}),
+        email,
         state,
         academicDetails: {
           collegeState,
           collegeName,
           academicYear,
         },
-        plans: nextPlans,
+        plans: buildCreateStudentPlanSnapshot(selectedPlan),
       })
 
-      showSnackbar('Student updated successfully')
+      if (result.passwordResetEmailSent) {
+        showSnackbar(
+          `Student created. Password setup email sent to ${email.trim().toLowerCase()}.`,
+        )
+      } else {
+        showSnackbar(
+          'Student created. Password email could not be sent — ask them to use Forgot password in the app.',
+        )
+      }
+
       onSaved()
       onClose()
-    } catch {
-      const errorMessage = 'Failed to update student. Please try again.'
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to create student. Please try again.'
       showSnackbar(errorMessage)
       setFormError(errorMessage)
       setIsSubmitting(false)
     }
   }
 
-  if (!isOpen || !studentUid) return null
+  if (!isOpen) return null
 
   return (
     <div
@@ -272,7 +224,7 @@ export function EditStudentModal({
     >
       <button
         type="button"
-        aria-label="Close edit student dialog"
+        aria-label="Close add student dialog"
         className="absolute inset-0 cursor-pointer bg-on-surface/40"
         onClick={handleClose}
         disabled={isSubmitting}
@@ -280,16 +232,17 @@ export function EditStudentModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-student-modal-title"
+        aria-labelledby="add-student-modal-title"
         className="relative z-10 flex max-h-[90vh] w-full max-w-[672px] flex-col overflow-hidden rounded-xl bg-surface-white shadow-tier-2"
       >
         <div className="flex items-start justify-between border-b border-border-subtle bg-surface px-gutter py-5">
           <div className="flex flex-col gap-2 pr-4">
-            <h2 id="edit-student-modal-title" className="text-h3 text-on-surface">
-              Edit Student
+            <h2 id="add-student-modal-title" className="text-h3 text-on-surface">
+              Add Student
             </h2>
             <p className="text-body-md text-on-surface-variant">
-              Update profile details, academic information, and assigned plan
+              Create an account with email sign-in. The student receives a password setup
+              email and is assigned the selected plan.
             </p>
           </div>
           <button
@@ -307,7 +260,7 @@ export function EditStudentModal({
           <div className="flex flex-col gap-4 px-gutter py-gutter" aria-busy="true">
             {Array.from({ length: 6 }).map((_, index) => (
               <div
-                key={`student-modal-skeleton-${index}`}
+                key={`add-student-skeleton-${index}`}
                 className="h-[38px] animate-pulse rounded-input bg-surface-container"
               />
             ))}
@@ -323,12 +276,12 @@ export function EditStudentModal({
             className="flex flex-col gap-gutter overflow-y-auto px-gutter py-gutter"
             onSubmit={(event) => {
               event.preventDefault()
-              handleSave()
+              handleCreate()
             }}
             noValidate
           >
             <TextField
-              id="student-name"
+              id="add-student-name"
               label="Name"
               value={name}
               disabled={isSubmitting}
@@ -341,36 +294,23 @@ export function EditStudentModal({
             />
 
             <TextField
-              id="student-email"
+              id="add-student-email"
               label="Email"
               type="email"
               value={email}
-              disabled={isSubmitting || !canEditEmail}
+              disabled={isSubmitting}
+              required
               error={emailError}
-              placeholder={canEditEmail ? 'Enter email address' : undefined}
+              placeholder="Enter email address"
               onChange={(event) => {
-                if (!canEditEmail) return
                 setEmail(event.target.value)
                 if (emailError) setEmailError(undefined)
               }}
             />
 
-            <TextField
-              id="student-phone"
-              label="Phone"
-              type="tel"
-              value={phone}
-              disabled={isSubmitting || !canEditPhone}
-              placeholder={canEditPhone ? 'Enter phone number' : undefined}
-              onChange={(event) => {
-                if (!canEditPhone) return
-                setPhone(event.target.value)
-              }}
-            />
-
             {stateOptions.length > 0 ? (
               <SelectField
-                id="student-state"
+                id="add-student-state"
                 label="State"
                 value={state}
                 options={stateOptions}
@@ -380,7 +320,7 @@ export function EditStudentModal({
               />
             ) : (
               <TextField
-                id="student-state"
+                id="add-student-state"
                 label="State"
                 value={state}
                 disabled={isSubmitting}
@@ -396,7 +336,7 @@ export function EditStudentModal({
 
               {stateOptions.length > 0 ? (
                 <SelectField
-                  id="student-college-state"
+                  id="add-student-college-state"
                   label="College State"
                   value={collegeState}
                   options={stateOptions}
@@ -409,7 +349,7 @@ export function EditStudentModal({
                 />
               ) : (
                 <TextField
-                  id="student-college-state"
+                  id="add-student-college-state"
                   label="College State"
                   value={collegeState}
                   disabled={isSubmitting}
@@ -422,7 +362,7 @@ export function EditStudentModal({
               )}
 
               <StudentCollegeNameSelect
-                id="student-college-name"
+                id="add-student-college-name"
                 stateCode={collegeState}
                 value={collegeName}
                 disabled={isSubmitting}
@@ -430,7 +370,7 @@ export function EditStudentModal({
               />
 
               <SelectField
-                id="student-academic-year"
+                id="add-student-academic-year"
                 label="Academic Year"
                 value={academicYear}
                 options={ACADEMIC_YEAR_OPTIONS}
@@ -441,13 +381,17 @@ export function EditStudentModal({
             </div>
 
             <SelectField
-              id="student-plan"
+              id="add-student-plan"
               label="Plan"
               value={selectedPlanId}
               options={planSelectOptions}
               placeholder="Select a plan"
               disabled={isSubmitting || plans.length === 0}
-              onChange={setSelectedPlanId}
+              error={planError}
+              onChange={(value) => {
+                setSelectedPlanId(value)
+                if (planError) setPlanError(undefined)
+              }}
             />
 
             {formError ? (
@@ -469,11 +413,11 @@ export function EditStudentModal({
           </Button>
           <Button
             type="button"
-            onClick={handleSave}
-            disabled={isSubmitting || isLoading || !!loadError}
+            onClick={handleCreate}
+            disabled={isSubmitting || isLoading || !!loadError || plans.length === 0}
             className="ml-4 shadow-tier-1"
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting ? 'Creating...' : 'Add Student'}
           </Button>
         </div>
       </div>
