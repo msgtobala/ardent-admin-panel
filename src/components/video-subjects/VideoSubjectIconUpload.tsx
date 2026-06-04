@@ -111,7 +111,7 @@ export function VideoSubjectIconUpload({
         <input
           ref={inputRef}
           type="file"
-          accept="image/svg+xml,image/png"
+          accept="image/svg+xml,.svg"
           className="sr-only"
           disabled={disabled}
           onChange={handleInputChange}
@@ -144,7 +144,7 @@ export function VideoSubjectIconUpload({
               Click to upload or drag and drop
             </p>
             <p className="mt-1 text-caption text-on-surface-variant">
-              SVG or PNG (max. 2MB)
+              SVG only (max. 2MB)
             </p>
           </>
         )}

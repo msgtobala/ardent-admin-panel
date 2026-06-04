@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { uploadVideoSubjectIcon } from '@/lib/video-subject-icon-storage'
-import { updateVideoSubject } from '@/lib/video-subjects'
+import { buildVideoSubjectIdFromName } from '@/lib/video-subject-id'
+import { createVideoSubject, updateVideoSubject } from '@/lib/video-subjects'
 import type { VideoSubject } from '@/types/video-subject'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { Button } from '@/components/ui/Button'
@@ -40,6 +41,8 @@ export function EditVideoSubjectModal({
   onSaved,
 }: EditVideoSubjectModalProps) {
   const { showSnackbar } = useSnackbar()
+  const isEditMode = subject != null
+
   const [subjectName, setSubjectName] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -48,6 +51,11 @@ export function EditVideoSubjectModal({
   const [iconError, setIconError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const previewSubjectId = useMemo(() => {
+    const id = buildVideoSubjectIdFromName(subjectName)
+    return id || undefined
+  }, [subjectName])
 
   const handleClose = useCallback(() => {
     if (isSubmitting) return
@@ -71,7 +79,22 @@ export function EditVideoSubjectModal({
   }, [isOpen, handleClose])
 
   useEffect(() => {
-    if (!isOpen || !subject) {
+    if (!isOpen) {
+      setPreviewUrl((prev) => {
+        revokePreviewUrlIfBlob(prev)
+        return null
+      })
+      setSubjectName('')
+      setDescription('')
+      setFile(null)
+      setSubjectNameError(undefined)
+      setIconError(undefined)
+      setFormError(undefined)
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!isEditMode) {
       setPreviewUrl((prev) => {
         revokePreviewUrlIfBlob(prev)
         return null
@@ -98,19 +121,25 @@ export function EditVideoSubjectModal({
     setIconError(undefined)
     setFormError(undefined)
     setIsSubmitting(false)
-  }, [isOpen, subject])
+  }, [isOpen, isEditMode, subject])
 
   function validate(): boolean {
     let valid = true
+    const trimmedSubjectName = subjectName.trim()
 
-    if (!subjectName.trim()) {
+    if (!trimmedSubjectName) {
       setSubjectNameError('Subject name is required')
+      valid = false
+    } else if (!buildVideoSubjectIdFromName(trimmedSubjectName)) {
+      setSubjectNameError(
+        'Subject name must contain letters or numbers to generate a document id',
+      )
       valid = false
     } else {
       setSubjectNameError(undefined)
     }
 
-    const hasExistingIcon = Boolean(subject?.icon?.trim())
+    const hasExistingIcon = isEditMode && Boolean(subject?.icon?.trim())
     if (!file && !hasExistingIcon) {
       setIconError('Subject icon is required')
       valid = false
@@ -137,37 +166,62 @@ export function EditVideoSubjectModal({
   }
 
   async function handleSave() {
-    if (!subject || !validate()) return
+    if (!validate()) return
 
     setFormError(undefined)
     setIsSubmitting(true)
 
     try {
-      const iconUrl = file
-        ? await uploadVideoSubjectIcon(file, subject.id)
-        : subject.icon
+      const trimmedSubjectName = subjectName.trim()
+      const trimmedDescription = description.trim()
 
-      await updateVideoSubject(subject.id, {
-        icon: iconUrl,
-        subjectName,
-        description,
-      })
+      if (isEditMode && subject) {
+        const iconUrl = file
+          ? await uploadVideoSubjectIcon(file, subject.id)
+          : subject.icon
 
-      showSnackbar('Video subject updated successfully')
+        await updateVideoSubject(subject.id, {
+          icon: iconUrl,
+          subjectName: trimmedSubjectName,
+          description: trimmedDescription,
+        })
+
+        showSnackbar('Video subject updated successfully')
+      } else {
+        const subjectId = buildVideoSubjectIdFromName(trimmedSubjectName)
+        if (!subjectId) {
+          throw new Error(
+            'Subject name must contain letters or numbers to generate a document id.',
+          )
+        }
+
+        const iconUrl = await uploadVideoSubjectIcon(file!, subjectId)
+
+        await createVideoSubject({
+          subjectName: trimmedSubjectName,
+          description: trimmedDescription,
+          icon: iconUrl,
+        })
+
+        showSnackbar('Video subject created successfully')
+      }
+
       onSaved()
       onClose()
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'Failed to update video subject. Please try again.'
+          : isEditMode
+            ? 'Failed to update video subject. Please try again.'
+            : 'Failed to create video subject. Please try again.'
       showSnackbar(message)
       setFormError(message)
       setIsSubmitting(false)
     }
   }
 
-  if (!isOpen || !subject) return null
+  if (!isOpen) return null
 
   return (
     <div
@@ -176,7 +230,11 @@ export function EditVideoSubjectModal({
     >
       <button
         type="button"
-        aria-label="Close edit video subject dialog"
+        aria-label={
+          isEditMode
+            ? 'Close edit video subject dialog'
+            : 'Close add video subject dialog'
+        }
         className="absolute inset-0 cursor-pointer bg-on-surface/40"
         onClick={handleClose}
         disabled={isSubmitting}
@@ -184,16 +242,18 @@ export function EditVideoSubjectModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-video-subject-modal-title"
+        aria-labelledby="video-subject-modal-title"
         className="relative z-10 flex max-h-[90vh] w-full max-w-[672px] flex-col overflow-hidden rounded-xl bg-surface-white shadow-tier-2"
       >
         <div className="flex items-start justify-between border-b border-border-subtle bg-surface px-gutter py-5">
           <div className="flex flex-col gap-2 pr-4">
-            <h2 id="edit-video-subject-modal-title" className="text-h3 text-on-surface">
-              Edit Video Subject
+            <h2 id="video-subject-modal-title" className="text-h3 text-on-surface">
+              {isEditMode ? 'Edit Video Subject' : 'New Video Subject'}
             </h2>
             <p className="text-body-md text-on-surface-variant">
-              Update the icon, subject name, and description
+              {isEditMode
+                ? 'Update the icon, subject name, and description'
+                : 'Add a new subject to the videos collection'}
             </p>
           </div>
           <button
@@ -216,7 +276,7 @@ export function EditVideoSubjectModal({
           noValidate
         >
           <VideoSubjectIconUpload
-            subjectName={subjectName || subject.subjectName}
+            subjectName={subjectName || subject?.subjectName || 'New subject'}
             file={file}
             previewUrl={previewUrl}
             error={iconError}
@@ -236,6 +296,12 @@ export function EditVideoSubjectModal({
               if (subjectNameError) setSubjectNameError(undefined)
             }}
           />
+
+          {!isEditMode && previewSubjectId ? (
+            <p className="text-caption text-on-surface-variant">
+              Document id: <span className="font-medium text-on-surface">{previewSubjectId}</span>
+            </p>
+          ) : null}
 
           <div className="flex w-full flex-col gap-1">
             <label htmlFor="video-subject-description" className="text-label-sm text-on-surface">
@@ -273,7 +339,11 @@ export function EditVideoSubjectModal({
             disabled={isSubmitting}
             className="ml-4 shadow-tier-1"
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting
+              ? 'Saving...'
+              : isEditMode
+                ? 'Save Changes'
+                : 'Create Subject'}
           </Button>
         </div>
       </div>

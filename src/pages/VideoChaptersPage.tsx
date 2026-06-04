@@ -6,8 +6,13 @@ import { VideoSubjectsTable } from '@/components/video-subjects/VideoSubjectsTab
 import { useVideoSubjects } from '@/hooks/useVideoSubjects'
 import type { VideoSubject } from '@/types/video-subject'
 
+type VideoSubjectModalState =
+  | { mode: 'add' }
+  | { mode: 'edit'; subject: VideoSubject }
+  | null
+
 export default function VideoChaptersPage() {
-  const [editingSubject, setEditingSubject] = useState<VideoSubject | null>(null)
+  const [modalState, setModalState] = useState<VideoSubjectModalState>(null)
   const [isReorderOpen, setIsReorderOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -28,12 +33,16 @@ export default function VideoChaptersPage() {
     handleToggleIsActive,
   } = useVideoSubjects(refreshKey)
 
-  function handleEditSubject(subject: VideoSubject) {
-    setEditingSubject(subject)
+  function handleNewSubject() {
+    setModalState({ mode: 'add' })
   }
 
-  function handleCloseEditModal() {
-    setEditingSubject(null)
+  function handleEditSubject(subject: VideoSubject) {
+    setModalState({ mode: 'edit', subject })
+  }
+
+  function handleCloseFormModal() {
+    setModalState(null)
   }
 
   function handleOpenReorderModal() {
@@ -48,9 +57,17 @@ export default function VideoChaptersPage() {
     setRefreshKey((prev) => prev + 1)
   }
 
+  const isFormModalOpen =
+    modalState?.mode === 'add' || modalState?.mode === 'edit'
+  const editingSubject =
+    modalState?.mode === 'edit' ? modalState.subject : null
+
   return (
     <div className="flex flex-col gap-gutter">
-      <VideoSubjectsPageHeader onEditSortOrder={handleOpenReorderModal} />
+      <VideoSubjectsPageHeader
+        onNewSubject={handleNewSubject}
+        onEditSortOrder={handleOpenReorderModal}
+      />
       <VideoSubjectsTable
         subjects={subjects}
         currentPage={currentPage}
@@ -69,10 +86,16 @@ export default function VideoChaptersPage() {
         onEdit={handleEditSubject}
       />
       <EditVideoSubjectModal
-        key={editingSubject ? `edit-video-subject-${editingSubject.id}` : 'edit-video-subject-closed'}
-        isOpen={editingSubject !== null}
+        key={
+          modalState === null
+            ? 'closed'
+            : modalState.mode === 'edit'
+              ? `edit-${modalState.subject.id}`
+              : 'add'
+        }
+        isOpen={isFormModalOpen}
         subject={editingSubject}
-        onClose={handleCloseEditModal}
+        onClose={handleCloseFormModal}
         onSaved={handleSubjectsUpdated}
       />
       <ReorderVideoSubjectsModal

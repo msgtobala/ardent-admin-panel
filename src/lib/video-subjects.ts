@@ -1,14 +1,22 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
-import type { UpdateVideoSubjectInput, VideoSubject, VideoSubjectDocument } from '@/types/video-subject'
+import type {
+  CreateVideoSubjectInput,
+  UpdateVideoSubjectInput,
+  VideoSubject,
+  VideoSubjectDocument,
+} from '@/types/video-subject'
+import { buildVideoSubjectIdFromName } from './video-subject-id'
 import { db } from './firebase'
 
 export const VIDEOS_COLLECTION = 'videos'
@@ -27,7 +35,7 @@ export function mapVideoSubjectDoc(
     description: data.description ?? '',
     imageUrl: data.imageUrl ?? '',
     icon: data.icon ?? '',
-    mvid: data.mvid ?? 0,
+    mvid: data.mvid ?? null,
     totalLessons: data.totalLessons ?? 0,
     totalModules: data.totalModules ?? 0,
     sortOrder: data.sortOrder ?? 0,
@@ -62,6 +70,52 @@ export async function updateVideoSubjectIsActive(
     isActive,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function createVideoSubject(
+  input: CreateVideoSubjectInput,
+): Promise<string> {
+  const subjectName = input.subjectName.trim()
+  const subjectId = buildVideoSubjectIdFromName(subjectName)
+
+  if (!subjectId) {
+    throw new Error(
+      'Subject name must contain letters or numbers to generate a document id.',
+    )
+  }
+
+  const docRef = doc(db, VIDEOS_COLLECTION, subjectId)
+  const existing = await getDoc(docRef)
+
+  if (existing.exists()) {
+    throw new Error('A video subject with this name already exists.')
+  }
+
+  const subjects = await fetchVideoSubjects()
+  const maxSortOrder = subjects.reduce(
+    (max, subject) => Math.max(max, subject.sortOrder),
+    -1,
+  )
+  const now = serverTimestamp()
+
+  await setDoc(docRef, {
+    id: subjectId,
+    subjectName,
+    description: input.description.trim(),
+    icon: input.icon.trim(),
+    imageUrl: '',
+    mvid: null,
+    totalLessons: 0,
+    totalModules: 0,
+    sortOrder: maxSortOrder + 1,
+    isActive: false,
+    studentsCompleted: 0,
+    studentsProgressing: 0,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  return subjectId
 }
 
 export async function updateVideoSubject(

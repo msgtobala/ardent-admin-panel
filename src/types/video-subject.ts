@@ -4,7 +4,7 @@ export interface VideoSubject {
   description: string
   imageUrl: string
   icon: string
-  mvid: number
+  mvid: number | null
   totalLessons: number
   totalModules: number
   sortOrder: number
@@ -21,7 +21,7 @@ export interface VideoSubjectDocument {
   description?: string
   imageUrl?: string
   icon?: string
-  mvid?: number
+  mvid?: number | null
   totalLessons?: number
   totalModules?: number
   sortOrder?: number
@@ -36,4 +36,10 @@ export interface UpdateVideoSubjectInput {
   icon: string
   subjectName: string
   description: string
+}
+
+export interface CreateVideoSubjectInput {
+  subjectName: string
+  description: string
+  icon: string
 }
