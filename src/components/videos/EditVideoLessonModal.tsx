@@ -7,8 +7,9 @@ import { useSnackbar } from '@/contexts/SnackbarContext'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { SelectField, type SelectOption } from '@/components/ui/SelectField'
+import type { SelectOption } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
+import { VideoLessonModuleField } from '@/components/videos/VideoLessonModuleField'
 import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
 import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
 import { VideoLessonPlayer } from '@/components/videos/VideoLessonPlayer'
@@ -63,7 +64,6 @@ export function EditVideoLessonModal({
   const [lessonNameError, setLessonNameError] = useState<string | undefined>()
   const [moduleNameError, setModuleNameError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
-  const useModuleDropdown = moduleNameOptions.length > 0
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const uploadSubjectId = lesson?.subjectId ?? subjectId ?? ''
@@ -134,9 +134,7 @@ export function EditVideoLessonModal({
     }
 
     if (!trimmedModuleName) {
-      setModuleNameError(
-        useModuleDropdown ? 'Module is required' : 'Module name is required',
-      )
+      setModuleNameError('Module name is required')
       valid = false
     } else {
       setModuleNameError(undefined)
@@ -337,43 +335,19 @@ export function EditVideoLessonModal({
               }}
             />
 
-            {useModuleDropdown ? (
-              <SelectField
-                id="video-lesson-module-name"
-                label="Module Name"
-                value={moduleName}
-                options={moduleNameOptions}
-                required
-                error={moduleNameError}
-                disabled={isFormBusy || isAwaitingUploadAfterCreate}
-                placeholder="Select module"
-                onChange={(value) => {
-                  setModuleNameField(value)
-                  if (moduleNameError) setModuleNameError(undefined)
-                }}
-              />
-            ) : (
-              <TextField
-                id="video-lesson-module-name"
-                label="Module Name"
-                value={moduleName}
-                required
-                error={moduleNameError}
-                disabled={isFormBusy || isAwaitingUploadAfterCreate}
-                onChange={(event) => {
-                  setModuleNameField(event.currentTarget.value)
-                  if (moduleNameError) setModuleNameError(undefined)
-                }}
-              />
-            )}
+            <VideoLessonModuleField
+              id="video-lesson-module-name"
+              value={moduleName}
+              options={moduleNameOptions}
+              required
+              error={moduleNameError}
+              disabled={isFormBusy || isAwaitingUploadAfterCreate}
+              onChange={(nextValue) => {
+                setModuleNameField(nextValue)
+                if (moduleNameError) setModuleNameError(undefined)
+              }}
+            />
           </div>
-
-          {!useModuleDropdown ? (
-            <p className="text-caption text-on-surface-variant">
-              No modules exist for this subject yet. Enter a module name for the first
-              lesson.
-            </p>
-          ) : null}
 
           <div className="flex flex-col gap-1">
             <label htmlFor="video-lesson-description" className="text-label-sm text-on-surface">
