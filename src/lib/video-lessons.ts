@@ -27,6 +27,7 @@ import { db } from './firebase'
 
 export const LESSONS_SUBCOLLECTION = 'lessons'
 export const VIDEO_LESSONS_PAGE_SIZE = 10
+const FIRESTORE_BATCH_LIMIT = 500
 
 const deleteVideoLessonCallable = httpsCallable<
   { subjectId: string; lessonId: string },
@@ -203,6 +204,60 @@ export async function updateVideoLesson(
     isFree: input.isFree,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function renameVideoLessonModule(
+  subjectId: string,
+  currentModuleName: string,
+  nextModuleName: string,
+): Promise<number> {
+  const trimmedSubjectId = subjectId.trim()
+  const trimmedCurrent = currentModuleName.trim()
+  const trimmedNext = nextModuleName.trim()
+
+  if (!trimmedSubjectId) {
+    throw new Error('Subject is required to rename a module.')
+  }
+
+  if (!trimmedCurrent) {
+    throw new Error('Current module name is required.')
+  }
+
+  if (!trimmedNext) {
+    throw new Error('Module name is required.')
+  }
+
+  if (trimmedCurrent === trimmedNext) {
+    return 0
+  }
+
+  const lessons = await fetchVideoLessons(trimmedSubjectId)
+  const lessonsToUpdate = lessons.filter(
+    (lesson) => lesson.moduleName.trim() === trimmedCurrent,
+  )
+
+  if (lessonsToUpdate.length === 0) {
+    return 0
+  }
+
+  for (let offset = 0; offset < lessonsToUpdate.length; offset += FIRESTORE_BATCH_LIMIT) {
+    const chunk = lessonsToUpdate.slice(offset, offset + FIRESTORE_BATCH_LIMIT)
+    const batch = writeBatch(db)
+
+    for (const lesson of chunk) {
+      batch.update(
+        doc(db, VIDEOS_COLLECTION, trimmedSubjectId, LESSONS_SUBCOLLECTION, lesson.id),
+        {
+          moduleName: trimmedNext,
+          updatedAt: serverTimestamp(),
+        },
+      )
+    }
+
+    await batch.commit()
+  }
+
+  return lessonsToUpdate.length
 }
 
 export async function updateVideoLessonsSortOrder(

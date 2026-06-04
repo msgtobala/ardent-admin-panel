@@ -65,6 +65,12 @@ export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
         breadcrumbs: { parent: 'Video Subjects', current: 'Overview' },
       },
       {
+        label: 'Edit Module',
+        path: '/edit-modules',
+        icon: 'view_module',
+        breadcrumbs: { parent: 'Edit Module', current: 'Overview' },
+      },
+      {
         label: 'Videos',
         path: '/videos',
         icon: 'smart_display',
