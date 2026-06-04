@@ -1,17 +1,13 @@
 import { useState } from 'react'
 import { ViewClinicalVignetteQuestionModal } from '@/components/clinical-vignettes/ViewClinicalVignetteQuestionModal'
-import { DeleteMcqModal } from '@/components/mcq-of-the-day/DeleteMcqModal'
 import { McqOfTheDayPageHeader } from '@/components/mcq-of-the-day/McqOfTheDayPageHeader'
 import { PreviousMcqTable } from '@/components/mcq-of-the-day/PreviousMcqTable'
 import { TodaysMcqCard } from '@/components/mcq-of-the-day/TodaysMcqCard'
-import { deletePreviousMcqQuestion } from '@/lib/mcq-of-the-day'
 import { useMcqOfTheDay } from '@/hooks/useMcqOfTheDay'
 import type { ResolvedMcqOfTheDayQuestion } from '@/types/mcq-of-the-day'
 
 export default function McqOfTheDayPage() {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [isViewOpen, setIsViewOpen] = useState(false)
-  const [deletingQuestion, setDeletingQuestion] = useState<ResolvedMcqOfTheDayQuestion | null>(
+  const [viewingQuestion, setViewingQuestion] = useState<ResolvedMcqOfTheDayQuestion | null>(
     null,
   )
 
@@ -33,32 +29,14 @@ export default function McqOfTheDayPage() {
     sortField,
     sortDirection,
     handleSort,
-  } = useMcqOfTheDay(refreshKey)
+  } = useMcqOfTheDay()
 
-  function handleRefresh() {
-    setRefreshKey((prev) => prev + 1)
-  }
-
-  function handleOpenView() {
-    setIsViewOpen(true)
+  function handleViewQuestion(question: ResolvedMcqOfTheDayQuestion) {
+    setViewingQuestion(question)
   }
 
   function handleCloseView() {
-    setIsViewOpen(false)
-  }
-
-  function handleDeleteQuestion(question: ResolvedMcqOfTheDayQuestion) {
-    setDeletingQuestion(question)
-  }
-
-  function handleCloseDelete() {
-    setDeletingQuestion(null)
-  }
-
-  async function handleConfirmDelete() {
-    if (!deletingQuestion) return
-    await deletePreviousMcqQuestion(deletingQuestion.id)
-    handleRefresh()
+    setViewingQuestion(null)
   }
 
   return (
@@ -68,7 +46,9 @@ export default function McqOfTheDayPage() {
       <TodaysMcqCard
         question={todaysQuestion}
         isLoading={isLoading && !error}
-        onView={handleOpenView}
+        onView={() => {
+          if (todaysQuestion) handleViewQuestion(todaysQuestion)
+        }}
       />
 
       <PreviousMcqTable
@@ -85,23 +65,18 @@ export default function McqOfTheDayPage() {
         onNext={handleNext}
         onPrevious={handlePrevious}
         onRetry={handleRetry}
-        onDelete={handleDeleteQuestion}
+        onView={handleViewQuestion}
         sortField={sortField}
         sortDirection={sortDirection}
         onSort={handleSort}
       />
 
       <ViewClinicalVignetteQuestionModal
-        isOpen={isViewOpen}
-        question={todaysQuestion}
+        isOpen={viewingQuestion !== null}
+        question={viewingQuestion}
         onClose={handleCloseView}
-      />
-
-      <DeleteMcqModal
-        isOpen={deletingQuestion !== null}
-        question={deletingQuestion}
-        onClose={handleCloseDelete}
-        onConfirm={handleConfirmDelete}
+        showMcqAttendanceStats
+        modalSubtitle="Complete qbank question for today's MCQ of the day"
       />
     </div>
   )

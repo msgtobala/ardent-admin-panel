@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -126,8 +125,3 @@ export async function upsertCurrentClinicalVignetteQuestion(
   })
 }
 
-export async function deletePreviousClinicalVignetteQuestion(
-  questionDocId: string,
-): Promise<void> {
-  await deleteDoc(doc(previousQuestionsCollectionRef, questionDocId))
-}

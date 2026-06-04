@@ -1,17 +1,13 @@
 import { useState } from 'react'
 import { ClinicalVignettesPageHeader } from '@/components/clinical-vignettes/ClinicalVignettesPageHeader'
-import { DeleteClinicalVignetteModal } from '@/components/clinical-vignettes/DeleteClinicalVignetteModal'
 import { ViewClinicalVignetteQuestionModal } from '@/components/clinical-vignettes/ViewClinicalVignetteQuestionModal'
 import { PreviousClinicalVignettesTable } from '@/components/clinical-vignettes/PreviousClinicalVignettesTable'
 import { TodaysClinicalVignetteCard } from '@/components/clinical-vignettes/TodaysClinicalVignetteCard'
-import { deletePreviousClinicalVignetteQuestion } from '@/lib/clinical-vignettes'
 import { useClinicalVignettes } from '@/hooks/useClinicalVignettes'
 import type { ResolvedClinicalVignetteQuestion } from '@/types/clinical-vignette'
 
 export default function ClinicalVignettesPage() {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [isViewOpen, setIsViewOpen] = useState(false)
-  const [deletingQuestion, setDeletingQuestion] =
+  const [viewingQuestion, setViewingQuestion] =
     useState<ResolvedClinicalVignetteQuestion | null>(null)
 
   const {
@@ -32,32 +28,14 @@ export default function ClinicalVignettesPage() {
     sortField,
     sortDirection,
     handleSort,
-  } = useClinicalVignettes(refreshKey)
+  } = useClinicalVignettes()
 
-  function handleRefresh() {
-    setRefreshKey((prev) => prev + 1)
-  }
-
-  function handleOpenView() {
-    setIsViewOpen(true)
+  function handleViewQuestion(question: ResolvedClinicalVignetteQuestion) {
+    setViewingQuestion(question)
   }
 
   function handleCloseView() {
-    setIsViewOpen(false)
-  }
-
-  function handleDeleteQuestion(question: ResolvedClinicalVignetteQuestion) {
-    setDeletingQuestion(question)
-  }
-
-  function handleCloseDelete() {
-    setDeletingQuestion(null)
-  }
-
-  async function handleConfirmDelete() {
-    if (!deletingQuestion) return
-    await deletePreviousClinicalVignetteQuestion(deletingQuestion.id)
-    handleRefresh()
+    setViewingQuestion(null)
   }
 
   return (
@@ -67,7 +45,9 @@ export default function ClinicalVignettesPage() {
       <TodaysClinicalVignetteCard
         question={todaysQuestion}
         isLoading={isLoading && !error}
-        onView={handleOpenView}
+        onView={() => {
+          if (todaysQuestion) handleViewQuestion(todaysQuestion)
+        }}
       />
 
       <PreviousClinicalVignettesTable
@@ -84,23 +64,16 @@ export default function ClinicalVignettesPage() {
         onNext={handleNext}
         onPrevious={handlePrevious}
         onRetry={handleRetry}
-        onDelete={handleDeleteQuestion}
+        onView={handleViewQuestion}
         sortField={sortField}
         sortDirection={sortDirection}
         onSort={handleSort}
       />
 
       <ViewClinicalVignetteQuestionModal
-        isOpen={isViewOpen}
-        question={todaysQuestion}
+        isOpen={viewingQuestion !== null}
+        question={viewingQuestion}
         onClose={handleCloseView}
-      />
-
-      <DeleteClinicalVignetteModal
-        isOpen={deletingQuestion !== null}
-        question={deletingQuestion}
-        onClose={handleCloseDelete}
-        onConfirm={handleConfirmDelete}
       />
     </div>
   )

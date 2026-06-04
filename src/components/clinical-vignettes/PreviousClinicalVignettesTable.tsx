@@ -1,3 +1,7 @@
+import {
+  appendScheduleHelpText,
+  getClinicalVignettesScheduleHelpText,
+} from '@/config/nuggets-daily-scheduler'
 import { CLINICAL_VIGNETTE_PREVIOUS_PAGE_SIZE } from '@/lib/clinical-vignettes'
 import { formatDisplayDate } from '@/lib/format-display-date'
 import type {
@@ -30,11 +34,16 @@ interface PreviousClinicalVignettesTableProps {
   onNext: () => void
   onPrevious: () => void
   onRetry: () => void
-  onDelete: (question: ResolvedClinicalVignetteQuestion) => void
+  onView: (question: ResolvedClinicalVignetteQuestion) => void
   sortField: ClinicalVignettePreviousSortField
   sortDirection: SortDirection
   onSort: (field: ClinicalVignettePreviousSortField) => void
 }
+
+const PREVIOUS_QUESTIONS_HELP_TEXT = appendScheduleHelpText(
+  'Historical clinical vignette questions from previous days.',
+  getClinicalVignettesScheduleHelpText(),
+)
 
 const COLUMN_WIDTHS = [undefined, undefined, 'w-[200px]', 'w-[100px]']
 
@@ -62,10 +71,10 @@ function PreviousQuestionsSkeletonRows() {
 
 function PreviousQuestionRow({
   question,
-  onDelete,
+  onView,
 }: {
   question: ResolvedClinicalVignetteQuestion
-  onDelete: (question: ResolvedClinicalVignetteQuestion) => void
+  onView: (question: ResolvedClinicalVignetteQuestion) => void
 }) {
   return (
     <TableRow>
@@ -82,11 +91,12 @@ function PreviousQuestionRow({
         <div className="flex items-center justify-center">
           <button
             type="button"
-            aria-label={`Delete previous question ${question.questionRefId}`}
-            onClick={() => onDelete(question)}
+            aria-label={`View question details for ${question.questionRefId}`}
+            title="View question details"
+            onClick={() => onView(question)}
             className={actionButtonClassName}
           >
-            <MaterialIcon name="delete" size={16} className="text-on-surface-variant" />
+            <MaterialIcon name="visibility" size={20} className="text-on-surface-variant" />
           </button>
         </div>
       </TableCell>
@@ -108,7 +118,7 @@ export function PreviousClinicalVignettesTable({
   onNext,
   onPrevious,
   onRetry,
-  onDelete,
+  onView,
   sortField,
   sortDirection,
   onSort,
@@ -139,7 +149,7 @@ export function PreviousClinicalVignettesTable({
           Previous Questions
         </h2>
         <p className="mt-1 text-body-md text-on-surface-variant">
-          Historical clinical vignette questions from previous days
+          {PREVIOUS_QUESTIONS_HELP_TEXT}
         </p>
       </section>
 
@@ -192,7 +202,7 @@ export function PreviousClinicalVignettesTable({
           <PreviousQuestionRow
             key={question.id}
             question={question}
-            onDelete={onDelete}
+            onView={onView}
           />
         ))}
       </DataTable>

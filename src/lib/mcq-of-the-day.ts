@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -14,7 +13,6 @@ import type {
   McqOfTheDayQuestionRef,
   ResolvedMcqOfTheDayQuestion,
 } from '@/types/mcq-of-the-day'
-import type { QbankDailyQuestionRef } from '@/types/qbank-daily-question'
 import { resolveQbankQuestionDetails } from './qbank-references'
 import { db } from './firebase'
 
@@ -38,32 +36,37 @@ const previousQuestionsCollectionRef = collection(
   MCQ_OF_THE_DAY_PREVIOUS_QUESTIONS_SUBCOLLECTION,
 )
 
-function mapMcqQuestionDoc(
-  snapshot: QueryDocumentSnapshot<DocumentData>,
+function mapAttendanceCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function mapMcqQuestionFromData(
+  documentId: string,
+  data: McqOfTheDayQuestionDocument,
 ): McqOfTheDayQuestionRef {
-  const data = snapshot.data() as McqOfTheDayQuestionDocument
+  const innerId = typeof data.id === 'string' && data.id.trim() ? data.id.trim() : documentId
 
   return {
-    id: snapshot.id,
+    id: innerId,
     questionRefId: data.questionRefId ?? '',
     subjectRefId: data.subjectRefId ?? '',
     chapterRefId: data.chapterRefId ?? '',
     createdAt: data.createdAt?.toDate?.() ?? new Date(),
     updatedAt: data.updatedAt?.toDate?.(),
+    correctAnswerCount: mapAttendanceCount(data.correctAnswerCount),
+    wrongAnswerCount: mapAttendanceCount(data.wrongAnswerCount),
+    studentsAttendedCount: mapAttendanceCount(data.studentsAttendedCount),
   }
 }
 
-function mapAttendanceCount(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+function mapMcqQuestionDoc(
+  snapshot: QueryDocumentSnapshot<DocumentData>,
+): McqOfTheDayQuestionRef {
+  return mapMcqQuestionFromData(snapshot.id, snapshot.data() as McqOfTheDayQuestionDocument)
 }
 
 export async function resolveMcqOfTheDayQuestion(
-  question: QbankDailyQuestionRef,
-  attendance?: {
-    correctAnswerCount: number
-    wrongAnswerCount: number
-    studentsAttendedCount: number
-  },
+  question: McqOfTheDayQuestionRef,
 ): Promise<ResolvedMcqOfTheDayQuestion> {
   const { subjectName, chapterName, questionText } = await resolveQbankQuestionDetails(
     question.subjectRefId,
@@ -81,37 +84,17 @@ export async function resolveMcqOfTheDayQuestion(
     questionText,
     createdAt: question.createdAt,
     updatedAt: question.updatedAt,
-    correctAnswerCount: attendance?.correctAnswerCount ?? 0,
-    wrongAnswerCount: attendance?.wrongAnswerCount ?? 0,
-    studentsAttendedCount: attendance?.studentsAttendedCount ?? 0,
+    correctAnswerCount: question.correctAnswerCount,
+    wrongAnswerCount: question.wrongAnswerCount,
+    studentsAttendedCount: question.studentsAttendedCount,
   }
 }
 
-export async function fetchTodaysMcqQuestion(): Promise<{
-  question: McqOfTheDayQuestionRef
-  correctAnswerCount: number
-  wrongAnswerCount: number
-  studentsAttendedCount: number
-} | null> {
+export async function fetchTodaysMcqQuestion(): Promise<McqOfTheDayQuestionRef | null> {
   const snapshot = await getDoc(todaysQuestionRef)
   if (!snapshot.exists()) return null
 
-  const data = snapshot.data() as McqOfTheDayQuestionDocument
-  const innerId = typeof data.id === 'string' && data.id.trim() ? data.id.trim() : snapshot.id
-
-  return {
-    question: {
-      id: innerId,
-      questionRefId: data.questionRefId ?? '',
-      subjectRefId: data.subjectRefId ?? '',
-      chapterRefId: data.chapterRefId ?? '',
-      createdAt: data.createdAt?.toDate?.() ?? new Date(),
-      updatedAt: data.updatedAt?.toDate?.(),
-    },
-    correctAnswerCount: mapAttendanceCount(data.correctAnswerCount),
-    wrongAnswerCount: mapAttendanceCount(data.wrongAnswerCount),
-    studentsAttendedCount: mapAttendanceCount(data.studentsAttendedCount),
-  }
+  return mapMcqQuestionFromData(snapshot.id, snapshot.data() as McqOfTheDayQuestionDocument)
 }
 
 export async function fetchPreviousMcqQuestions(): Promise<McqOfTheDayQuestionRef[]> {
@@ -123,6 +106,3 @@ export async function fetchPreviousMcqQuestions(): Promise<McqOfTheDayQuestionRe
   return snapshot.docs.map(mapMcqQuestionDoc)
 }
 
-export async function deletePreviousMcqQuestion(questionDocId: string): Promise<void> {
-  await deleteDoc(doc(previousQuestionsCollectionRef, questionDocId))
-}

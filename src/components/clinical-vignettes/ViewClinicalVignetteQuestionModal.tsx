@@ -7,15 +7,32 @@ import {
   resolveCorrectAnswerDescription,
 } from '@/lib/qbank-question-display'
 import type { ResolvedQbankDailyQuestion } from '@/types/qbank-daily-question'
+import type { ResolvedMcqOfTheDayQuestion } from '@/types/mcq-of-the-day'
 import type { FullQbankQuestionDetails } from '@/types/qbank-question'
 import { Button } from '@/components/ui/Button'
+import { CircularLoader } from '@/components/ui/CircularLoader'
 import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+const DEFAULT_MODAL_SUBTITLE =
+  "Complete qbank question for today's clinical vignette"
 
 interface ViewClinicalVignetteQuestionModalProps {
   isOpen: boolean
   question: ResolvedQbankDailyQuestion | null
   onClose: () => void
+  showMcqAttendanceStats?: boolean
+  modalSubtitle?: string
+}
+
+function isMcqOfTheDayQuestion(
+  question: ResolvedQbankDailyQuestion,
+): question is ResolvedMcqOfTheDayQuestion {
+  return (
+    'correctAnswerCount' in question &&
+    'wrongAnswerCount' in question &&
+    'studentsAttendedCount' in question
+  )
 }
 
 interface DetailRowProps {
@@ -45,19 +62,61 @@ function DetailRow({ label, value, copyId, copySuccessMessage }: DetailRowProps)
   )
 }
 
+function DetailRowSkeleton() {
+  return (
+    <div className="flex flex-col gap-1" aria-hidden>
+      <div className="h-4 w-28 animate-pulse rounded bg-surface-container" />
+      <div className="h-5 w-full max-w-md animate-pulse rounded bg-surface-container" />
+    </div>
+  )
+}
+
+function AnswerOptionsSkeleton() {
+  return (
+    <div className="flex flex-col gap-2" aria-hidden>
+      <div className="h-4 w-32 animate-pulse rounded bg-surface-container" />
+      <ul className="flex flex-col gap-2">
+        {['a', 'b', 'c', 'd'].map((key) => (
+          <li
+            key={key}
+            className="h-12 animate-pulse rounded-input bg-surface-container"
+          />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function QuestionDetailsLoadingSkeleton() {
+  return (
+    <div className="relative flex flex-col gap-gutter" aria-busy="true" aria-live="polite">
+      <AnswerOptionsSkeleton />
+      <DetailRowSkeleton />
+      <DetailRowSkeleton />
+      <div
+        className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface-white/50"
+        aria-hidden
+      >
+        <CircularLoader size="md" label="Loading answer details" />
+      </div>
+    </div>
+  )
+}
+
 export function ViewClinicalVignetteQuestionModal({
   isOpen,
   question,
   onClose,
+  showMcqAttendanceStats = false,
+  modalSubtitle = DEFAULT_MODAL_SUBTITLE,
 }: ViewClinicalVignetteQuestionModalProps) {
   const [details, setDetails] = useState<FullQbankQuestionDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
 
   const handleClose = useCallback(() => {
-    if (isLoading) return
     onClose()
-  }, [isLoading, onClose])
+  }, [onClose])
 
   useEffect(() => {
     if (!isOpen) {
@@ -134,6 +193,8 @@ export function ViewClinicalVignetteQuestionModal({
     correctOptionKey,
     correctAnswerText,
   )
+  const shouldShowDetailsSkeleton = !error && (isLoading || details === null)
+  const hasLoadedDetails = !error && details !== null
 
   return (
     <div
@@ -145,7 +206,6 @@ export function ViewClinicalVignetteQuestionModal({
         aria-label="Close question details dialog"
         className="absolute inset-0 cursor-pointer bg-on-surface/40"
         onClick={handleClose}
-        disabled={isLoading}
       />
       <div
         role="dialog"
@@ -158,69 +218,82 @@ export function ViewClinicalVignetteQuestionModal({
             <h2 id="view-clinical-vignette-modal-title" className="text-h3 text-on-surface">
               Question Details
             </h2>
-            <p className="text-body-md text-on-surface-variant">
-              Complete qbank question for today&apos;s clinical vignette
-            </p>
+            <p className="text-body-md text-on-surface-variant">{modalSubtitle}</p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            disabled={isLoading}
             aria-label="Close"
-            className="cursor-pointer rounded-full p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer rounded-full p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
             <MaterialIcon name="close" size={20} className="text-on-surface" />
           </button>
         </div>
 
         <div className="flex flex-col gap-gutter overflow-y-auto px-gutter py-gutter">
-          {isLoading ? (
-            <p className="text-body-md text-on-surface-variant">Loading question details...</p>
-          ) : error ? (
+          <DetailRow
+            label="Subject Name"
+            value={question.subjectName}
+            copyId={question.subjectRefId}
+            copySuccessMessage="Subject id copied to clipboard"
+          />
+          <DetailRow
+            label="Chapter Name"
+            value={question.chapterName}
+            copyId={question.chapterRefId}
+            copySuccessMessage="Chapter id copied to clipboard"
+          />
+          <DetailRow
+            label="Question ID"
+            value={details?.questionRefId ?? question.questionRefId}
+            copyId={question.questionRefId}
+            copySuccessMessage="Question id copied to clipboard"
+          />
+          <DetailRow
+            label="Question"
+            value={details?.questionText ?? question.questionText}
+          />
+          {details?.questionImage ? (
+            <div className="flex flex-col gap-1 transition-opacity duration-300 ease-out">
+              <span className="text-label-sm text-on-surface-variant">Question Image</span>
+              <img
+                src={details.questionImage}
+                alt="Question illustration"
+                className="max-h-64 w-auto max-w-full rounded-input border border-border-subtle object-contain"
+              />
+            </div>
+          ) : null}
+          <DetailRow label="Created Date" value={formatDisplayDate(question.createdAt)} />
+          {showMcqAttendanceStats && isMcqOfTheDayQuestion(question) ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DetailRow
+                label="Students Answered Correctly"
+                value={question.correctAnswerCount.toLocaleString()}
+              />
+              <DetailRow
+                label="Students Answered Incorrectly"
+                value={question.wrongAnswerCount.toLocaleString()}
+              />
+              <DetailRow
+                label="Students Attended"
+                value={question.studentsAttendedCount.toLocaleString()}
+              />
+            </div>
+          ) : null}
+
+          {shouldShowDetailsSkeleton ? <QuestionDetailsLoadingSkeleton /> : null}
+
+          {!isLoading && error ? (
             <p className="text-body-md text-error-red" role="alert">
               {error}
             </p>
-          ) : (
-            <>
-              <DetailRow
-                label="Subject Name"
-                value={question.subjectName}
-                copyId={question.subjectRefId}
-                copySuccessMessage="Subject id copied to clipboard"
-              />
-              <DetailRow
-                label="Chapter Name"
-                value={question.chapterName}
-                copyId={question.chapterRefId}
-                copySuccessMessage="Chapter id copied to clipboard"
-              />
-              <DetailRow
-                label="Question ID"
-                value={details?.questionRefId ?? question.questionRefId}
-                copyId={question.questionRefId}
-                copySuccessMessage="Question id copied to clipboard"
-              />
-              <DetailRow
-                label="Question"
-                value={details?.questionText ?? question.questionText}
-              />
-              {details?.questionImage ? (
-                <div className="flex flex-col gap-1">
-                  <span className="text-label-sm text-on-surface-variant">Question Image</span>
-                  <img
-                    src={details.questionImage}
-                    alt="Question illustration"
-                    className="max-h-64 w-auto max-w-full rounded-input border border-border-subtle object-contain"
-                  />
-                </div>
-              ) : null}
-              <DetailRow
-                label="Created Date"
-                value={formatDisplayDate(question.createdAt)}
-              />
+          ) : null}
+
+          {hasLoadedDetails ? (
+            <div className="flex flex-col gap-gutter transition-opacity duration-300 ease-out">
               <div className="flex flex-col gap-2">
                 <span className="text-label-sm text-on-surface-variant">Answer Options</span>
-                {details && details.answerOptions.length > 0 ? (
+                {details.answerOptions.length > 0 ? (
                   <ul className="flex flex-col gap-2">
                     {details.answerOptions.map((answerOption, optionIndex) => {
                       const isCorrect = isCorrectAnswerOption(
@@ -254,12 +327,12 @@ export function ViewClinicalVignetteQuestionModal({
                 label="Correct Answer Description"
                 value={correctAnswerDescription}
               />
-            </>
-          )}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-end border-t border-border-subtle bg-surface-container-low px-gutter py-4">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Close
           </Button>
         </div>

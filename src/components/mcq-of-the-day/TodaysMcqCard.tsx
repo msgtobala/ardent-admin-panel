@@ -1,6 +1,16 @@
+import {
+  appendScheduleHelpText,
+  getMcqOfTheDayScheduleHelpText,
+} from '@/config/nuggets-daily-scheduler'
+import { formatTodayDate, getTodayDateIso } from '@/lib/format-display-date'
 import type { ResolvedMcqOfTheDayQuestion } from '@/types/mcq-of-the-day'
 import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+const TODAYS_QUESTION_HELP_TEXT = appendScheduleHelpText(
+  'Active MCQ shown to students today.',
+  getMcqOfTheDayScheduleHelpText(),
+)
 
 interface TodaysMcqCardProps {
   question: ResolvedMcqOfTheDayQuestion | null
@@ -65,9 +75,13 @@ export function TodaysMcqCard({ question, isLoading, onView }: TodaysMcqCardProp
             <h2 id="todays-mcq-title" className="text-card-title text-on-surface">
               Today&apos;s Question
             </h2>
-            <p className="text-body-md text-on-surface-variant">
-              Active MCQ shown to students today
-            </p>
+            <time
+              dateTime={getTodayDateIso()}
+              className="text-label-sm font-medium !text-black"
+            >
+              {formatTodayDate()}
+            </time>
+            <p className="text-body-md text-on-surface-variant">{TODAYS_QUESTION_HELP_TEXT}</p>
           </div>
         </div>
         <button
@@ -108,8 +122,14 @@ export function TodaysMcqCard({ question, isLoading, onView }: TodaysMcqCardProp
               copySuccessMessage="Question id copied to clipboard"
             />
             <div className="grid gap-4 sm:grid-cols-3">
-              <StatField label="Correct Answers" value={question.correctAnswerCount} />
-              <StatField label="Wrong Answers" value={question.wrongAnswerCount} />
+              <StatField
+                label="Students Answered Correctly"
+                value={question.correctAnswerCount}
+              />
+              <StatField
+                label="Students Answered Incorrectly"
+                value={question.wrongAnswerCount}
+              />
               <StatField label="Students Attended" value={question.studentsAttendedCount} />
             </div>
           </>

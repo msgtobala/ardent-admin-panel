@@ -49,17 +49,13 @@ export function useMcqOfTheDay(refreshKey = 0) {
     setIndexUrl(undefined)
 
     try {
-      const [todaysRecord, previousQuestionsList] = await Promise.all([
+      const [todaysQuestionRef, previousQuestionsList] = await Promise.all([
         fetchTodaysMcqQuestion(),
         fetchPreviousMcqQuestions(),
       ])
 
-      const resolvedCurrent = todaysRecord
-        ? await resolveMcqOfTheDayQuestion(todaysRecord.question, {
-            correctAnswerCount: todaysRecord.correctAnswerCount,
-            wrongAnswerCount: todaysRecord.wrongAnswerCount,
-            studentsAttendedCount: todaysRecord.studentsAttendedCount,
-          })
+      const resolvedCurrent = todaysQuestionRef
+        ? await resolveMcqOfTheDayQuestion(todaysQuestionRef)
         : null
 
       const resolvedPrevious = await Promise.all(

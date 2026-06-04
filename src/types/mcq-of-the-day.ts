@@ -1,6 +1,10 @@
 import type { QbankDailyQuestionRef, ResolvedQbankDailyQuestion } from '@/types/qbank-daily-question'
 
-export type McqOfTheDayQuestionRef = QbankDailyQuestionRef
+export interface McqOfTheDayQuestionRef extends QbankDailyQuestionRef {
+  correctAnswerCount: number
+  wrongAnswerCount: number
+  studentsAttendedCount: number
+}
 
 export interface McqOfTheDayQuestionDocument {
   id?: string

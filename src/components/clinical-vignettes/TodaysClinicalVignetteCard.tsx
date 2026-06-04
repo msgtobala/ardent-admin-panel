@@ -1,6 +1,16 @@
+import {
+  appendScheduleHelpText,
+  getClinicalVignettesScheduleHelpText,
+} from '@/config/nuggets-daily-scheduler'
+import { formatTodayDate, getTodayDateIso } from '@/lib/format-display-date'
 import type { ResolvedClinicalVignetteQuestion } from '@/types/clinical-vignette'
 import { CopyIdButton } from '@/components/ui/CopyIdButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+const TODAYS_QUESTION_HELP_TEXT = appendScheduleHelpText(
+  'Active vignette shown to students today.',
+  getClinicalVignettesScheduleHelpText(),
+)
 
 interface TodaysClinicalVignetteCardProps {
   question: ResolvedClinicalVignetteQuestion | null
@@ -62,9 +72,13 @@ export function TodaysClinicalVignetteCard({
             >
               Today&apos;s Question
             </h2>
-            <p className="text-body-md text-on-surface-variant">
-              Active vignette shown to students today
-            </p>
+            <time
+              dateTime={getTodayDateIso()}
+              className="text-label-sm font-medium !text-black"
+            >
+              {formatTodayDate()}
+            </time>
+            <p className="text-body-md text-on-surface-variant">{TODAYS_QUESTION_HELP_TEXT}</p>
           </div>
         </div>
         <button

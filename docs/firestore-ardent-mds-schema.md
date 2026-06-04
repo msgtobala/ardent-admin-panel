@@ -460,7 +460,7 @@ Container for daily MCQ. Fixed document IDs:
 
 #### Subcollection: `mcq_of_the_day/previous_questions/questions/{questionId}`
 
-Historical question documents (MCQ shape or references).
+Same fields as `todays_question` (`questionRefId`, `subjectRefId`, `chapterRefId`, `correctAnswerCount`, `wrongAnswerCount`, `studentsAttendedCount`, `id`, timestamps).
 
 ---
 
