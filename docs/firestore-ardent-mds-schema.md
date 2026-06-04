@@ -69,7 +69,9 @@ ardent-mds (default)
 │   └── previous_questions/
 │       └── questions/{questionId}
 ├── clinical_vignettes/
-│   └── current_question               # single document
+│   ├── current_question               # single document
+│   └── previous_questions/
+│       └── questions/{questionId}
 ├── 10_mins_concept/{docId}
 ├── suggested_videos/{docId}
 ├── plans/{planId}
@@ -477,6 +479,10 @@ Pointer to the active vignette.
 | `createdAt` | timestamp |
 | `updatedAt` | timestamp |
 
+#### Subcollection: `clinical_vignettes/previous_questions/questions/{questionId}`
+
+Same reference fields as `current_question` (`questionRefId`, `subjectRefId`, `chapterRefId`, `id`, timestamps).
+
 ---
 
 ### `10_mins_concept`
@@ -692,7 +698,7 @@ Used under `qbanks/.../questions`, `3_min_challenges/.../questions`, and similar
 | `difficulty` | string |
 | `tags` | array |
 | `microtopics` | array |
-| `answerOptions` | array\<object\> |
+| `answerOptions` | array\<object\> — each item: `option` (string), `choice` (string), optional `sortOrder` |
 | `correctAnswer` | map: `option`, `description`, `image[]` |
 | `reference` | map (see below) |
 | `references` | array (qbanks variant) |
