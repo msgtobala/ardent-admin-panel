@@ -16,6 +16,7 @@ import McqOfTheDayPage from '@/pages/McqOfTheDayPage'
 import TenMinsConceptPage from '@/pages/TenMinsConceptPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
 import VideoChaptersPage from '@/pages/VideoChaptersPage'
+import GenerateThumbnailPage from '@/pages/GenerateThumbnailPage'
 import VideosPage from '@/pages/VideosPage'
 import StudentsPage from '@/pages/StudentsPage'
 
@@ -101,6 +102,10 @@ export const router = createBrowserRouter([
       {
         path: 'videos',
         element: <VideosPage />,
+      },
+      {
+        path: 'generate-thumbnail',
+        element: <GenerateThumbnailPage />,
       },
     ],
   },

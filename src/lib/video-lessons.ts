@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getCountFromServer,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
@@ -10,11 +11,13 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
-import type {
-  CreateVideoLessonInput,
-  UpdateVideoLessonInput,
-  VideoLesson,
-  VideoLessonDocument,
+import {
+  MUX_ASSET_STATUS,
+  type CreateVideoLessonInput,
+  type MuxAssetStatus,
+  type UpdateVideoLessonInput,
+  type VideoLesson,
+  type VideoLessonDocument,
 } from '@/types/video-lesson'
 import { VIDEOS_COLLECTION } from './video-subjects'
 import { db } from './firebase'
@@ -24,6 +27,24 @@ export const VIDEO_LESSONS_PAGE_SIZE = 10
 
 function lessonsRef(subjectId: string) {
   return collection(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION)
+}
+
+function normalizeMuxAssetStatus(data: VideoLessonDocument): MuxAssetStatus {
+  const status = data.muxAssetStatus
+  if (
+    status === MUX_ASSET_STATUS.idle ||
+    status === MUX_ASSET_STATUS.processing ||
+    status === MUX_ASSET_STATUS.ready ||
+    status === MUX_ASSET_STATUS.errored
+  ) {
+    return status
+  }
+
+  if (data.muxPlaybackId?.trim()) {
+    return MUX_ASSET_STATUS.ready
+  }
+
+  return MUX_ASSET_STATUS.idle
 }
 
 export function mapVideoLessonDoc(
@@ -42,6 +63,8 @@ export function mapVideoLessonDoc(
     duration: data.duration ?? 0,
     muxAssetId: data.muxAssetId ?? '',
     muxPlaybackId: data.muxPlaybackId ?? '',
+    muxAssetStatus: normalizeMuxAssetStatus(data),
+    muxAssetError: data.muxAssetError?.trim() || undefined,
     timelines: data.timelines ?? [],
     facultyId: data.facultyId ?? '',
     sortOrder: data.sortOrder ?? 0,
@@ -70,6 +93,22 @@ function compareLessonSort(left: VideoLesson, right: VideoLesson): number {
   })
 }
 
+export async function fetchVideoLesson(
+  subjectId: string,
+  lessonId: string,
+): Promise<VideoLesson | null> {
+  const trimmedSubjectId = subjectId.trim()
+  const trimmedLessonId = lessonId.trim()
+  if (!trimmedSubjectId || !trimmedLessonId) return null
+
+  const snapshot = await getDoc(
+    doc(db, VIDEOS_COLLECTION, trimmedSubjectId, LESSONS_SUBCOLLECTION, trimmedLessonId),
+  )
+  if (!snapshot.exists()) return null
+
+  return mapVideoLessonDoc(trimmedSubjectId, snapshot)
+}
+
 export async function fetchVideoLessons(subjectId: string): Promise<VideoLesson[]> {
   const snapshot = await getDocs(lessonsRef(subjectId))
   const lessons = snapshot.docs.map((lessonDoc) =>
@@ -91,12 +130,14 @@ export async function createVideoLesson(
     lessonName: input.lessonName.trim(),
     moduleName: input.moduleName.trim(),
     description: input.description.trim(),
-    thumbnailImage: input.thumbnailImage.trim(),
-    duration: input.duration,
-    muxAssetId: input.muxAssetId.trim(),
-    muxPlaybackId: input.muxPlaybackId.trim(),
+    thumbnailImage: '',
+    duration: 0,
+    muxAssetId: '',
+    muxPlaybackId: '',
+    muxAssetStatus: MUX_ASSET_STATUS.idle,
+    muxAssetError: '',
     timelines: [],
-    facultyId: input.facultyId.trim(),
+    facultyId: '',
     sortOrder: input.sortOrder,
     rating: 0,
     isActive: input.isActive,
@@ -123,6 +164,46 @@ export async function updateVideoLesson(
     isActive: input.isActive,
     isFree: input.isFree,
     sortOrder: input.sortOrder,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateVideoLessonMuxAssetStatus(
+  subjectId: string,
+  lessonId: string,
+  status: MuxAssetStatus,
+  options?: { errorMessage?: string },
+): Promise<void> {
+  const updatePayload: Record<string, unknown> = {
+    muxAssetStatus: status,
+    updatedAt: serverTimestamp(),
+  }
+
+  if (status === MUX_ASSET_STATUS.errored && options?.errorMessage?.trim()) {
+    updatePayload.muxAssetError = options.errorMessage.trim()
+  }
+
+  if (status === MUX_ASSET_STATUS.processing) {
+    updatePayload.muxAssetError = ''
+  }
+
+  if (status === MUX_ASSET_STATUS.ready) {
+    updatePayload.muxAssetError = ''
+  }
+
+  await updateDoc(
+    doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, lessonId),
+    updatePayload,
+  )
+}
+
+export async function updateVideoLessonThumbnailImage(
+  subjectId: string,
+  lessonId: string,
+  thumbnailImage: string,
+): Promise<void> {
+  await updateDoc(doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, lessonId), {
+    thumbnailImage: thumbnailImage.trim(),
     updatedAt: serverTimestamp(),
   })
 }

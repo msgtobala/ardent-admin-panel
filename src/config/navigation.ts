@@ -15,6 +15,12 @@ export interface NavChildItem {
   path: string
   icon: string
   breadcrumbs: NavBreadcrumbs
+  /** When true, route stays registered but the link is not shown in the sidebar. */
+  hiddenInSidebar?: boolean
+}
+
+export function getSidebarVisibleNavChildren(children: NavChildItem[]): NavChildItem[] {
+  return children.filter((child) => !child.hiddenInSidebar)
 }
 
 export interface NavCollapsibleGroup {
@@ -63,6 +69,13 @@ export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
         path: '/videos',
         icon: 'smart_display',
         breadcrumbs: { parent: 'Videos', current: 'Overview' },
+      },
+      {
+        label: 'Generate Thumbnail',
+        path: '/generate-thumbnail',
+        icon: 'auto_awesome',
+        breadcrumbs: { parent: 'Generate Thumbnail', current: 'Overview' },
+        hiddenInSidebar: true,
       },
     ],
   },

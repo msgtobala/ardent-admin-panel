@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createVideoLesson, updateVideoLesson } from '@/lib/video-lessons'
-import type { VideoLesson } from '@/types/video-lesson'
+import { MUX_ASSET_STATUS, type VideoLesson } from '@/types/video-lesson'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { TextField } from '@/components/ui/TextField'
+import { VideoLessonThumbnailPreview } from '@/components/videos/VideoLessonThumbnailPreview'
 import { VideoLessonVideoUpload } from '@/components/videos/VideoLessonVideoUpload'
 
 interface EditVideoLessonModalProps {
@@ -31,11 +32,6 @@ function getInitialFormState(
     sortOrder: lesson?.sortOrder?.toString() ?? '0',
     isActive: lesson?.isActive ?? false,
     isFree: lesson?.isFree ?? false,
-    muxAssetId: lesson?.muxAssetId ?? '',
-    muxPlaybackId: lesson?.muxPlaybackId ?? '',
-    facultyId: lesson?.facultyId ?? '',
-    thumbnailImage: lesson?.thumbnailImage ?? '',
-    duration: lesson?.duration ? String(lesson.duration) : '0',
   }
 }
 
@@ -56,19 +52,23 @@ export function EditVideoLessonModal({
   const [sortOrder, setSortOrderField] = useState('0')
   const [isActive, setIsActive] = useState(false)
   const [isFree, setIsFree] = useState(false)
-  const [muxAssetId, setMuxAssetId] = useState('')
-  const [muxPlaybackId, setMuxPlaybackId] = useState('')
-  const [facultyId, setFacultyId] = useState('')
-  const [thumbnailImage, setThumbnailImage] = useState('')
-  const [duration, setDuration] = useState('0')
+  const [createdLessonId, setCreatedLessonId] = useState<string | undefined>()
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null)
+  const [startPendingUpload, setStartPendingUpload] = useState(false)
+  const [hasVideoLinked, setHasVideoLinked] = useState(false)
+  const [isVideoUploading, setIsVideoUploading] = useState(false)
   const [lessonNameError, setLessonNameError] = useState<string | undefined>()
   const [moduleNameError, setModuleNameError] = useState<string | undefined>()
   const [sortOrderError, setSortOrderError] = useState<string | undefined>()
-  const [muxAssetIdError, setMuxAssetIdError] = useState<string | undefined>()
-  const [muxPlaybackIdError, setMuxPlaybackIdError] = useState<string | undefined>()
-  const [durationError, setDurationError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const uploadSubjectId = lesson?.subjectId ?? subjectId ?? ''
+  const uploadLessonId = lesson?.id ?? createdLessonId ?? ''
+  const isFormBusy = isSubmitting || isVideoUploading
+  const isAwaitingUploadAfterCreate = Boolean(
+    isAddMode && createdLessonId && pendingVideoFile && !hasVideoLinked,
+  )
 
   useEffect(() => {
     if (!isOpen) return
@@ -80,25 +80,25 @@ export function EditVideoLessonModal({
     setSortOrderField(initial.sortOrder)
     setIsActive(initial.isActive)
     setIsFree(initial.isFree)
-    setMuxAssetId(initial.muxAssetId)
-    setMuxPlaybackId(initial.muxPlaybackId)
-    setFacultyId(initial.facultyId)
-    setThumbnailImage(initial.thumbnailImage)
-    setDuration(initial.duration)
+    setCreatedLessonId(undefined)
+    setPendingVideoFile(null)
+    setStartPendingUpload(false)
+    setHasVideoLinked(
+      lesson?.muxAssetStatus === MUX_ASSET_STATUS.ready ||
+        Boolean(lesson?.muxPlaybackId?.trim()),
+    )
+    setIsVideoUploading(false)
     setLessonNameError(undefined)
     setModuleNameError(undefined)
     setSortOrderError(undefined)
-    setMuxAssetIdError(undefined)
-    setMuxPlaybackIdError(undefined)
-    setDurationError(undefined)
     setFormError(undefined)
     setIsSubmitting(false)
   }, [isOpen, lesson, defaultModuleName])
 
   const handleClose = useCallback(() => {
-    if (isSubmitting) return
+    if (isFormBusy) return
     onClose()
-  }, [isSubmitting, onClose])
+  }, [isFormBusy, onClose])
 
   useEffect(() => {
     if (!isOpen) return
@@ -121,7 +121,6 @@ export function EditVideoLessonModal({
     const trimmedLessonName = lessonName.trim()
     const trimmedModuleName = moduleName.trim()
     const parsedSortOrder = Number(sortOrder)
-    const parsedDuration = Number(duration)
 
     if (!trimmedLessonName) {
       setLessonNameError('Lesson name is required')
@@ -144,29 +143,6 @@ export function EditVideoLessonModal({
       setSortOrderError(undefined)
     }
 
-    if (isAddMode) {
-      if (!muxAssetId.trim()) {
-        setMuxAssetIdError('Mux asset id is required')
-        valid = false
-      } else {
-        setMuxAssetIdError(undefined)
-      }
-
-      if (!muxPlaybackId.trim()) {
-        setMuxPlaybackIdError('Mux playback id is required')
-        valid = false
-      } else {
-        setMuxPlaybackIdError(undefined)
-      }
-
-      if (!Number.isFinite(parsedDuration) || parsedDuration < 0) {
-        setDurationError('Duration must be a non-negative number (seconds)')
-        valid = false
-      } else {
-        setDurationError(undefined)
-      }
-    }
-
     return valid
   }
 
@@ -186,25 +162,37 @@ export function EditVideoLessonModal({
     }
 
     try {
-      if (isAddMode && subjectId) {
-        await createVideoLesson(subjectId, {
-          ...sharedInput,
-          muxAssetId: muxAssetId.trim(),
-          muxPlaybackId: muxPlaybackId.trim(),
-          facultyId: facultyId.trim(),
-          thumbnailImage: thumbnailImage.trim(),
-          duration: Number(duration),
-        })
+      if (isAddMode && subjectId && !createdLessonId) {
+        const newLessonId = await createVideoLesson(subjectId, sharedInput)
+        setCreatedLessonId(newLessonId)
+        onSaved()
+
+        if (pendingVideoFile) {
+          setStartPendingUpload(true)
+          showSnackbar('Lesson created. Uploading video…')
+          return
+        }
+
         showSnackbar('Video lesson created successfully')
-      } else if (lesson) {
-        await updateVideoLesson(lesson.subjectId, lesson.id, sharedInput)
-        showSnackbar('Video lesson updated successfully')
-      } else {
+        onClose()
         return
       }
 
-      onSaved()
-      onClose()
+      if (lesson) {
+        await updateVideoLesson(lesson.subjectId, lesson.id, sharedInput)
+        showSnackbar('Video lesson updated successfully')
+        onSaved()
+        onClose()
+        return
+      }
+
+      if (isAddMode && createdLessonId && subjectId) {
+        await updateVideoLesson(subjectId, createdLessonId, sharedInput)
+        showSnackbar('Video lesson updated successfully')
+        onSaved()
+        onClose()
+        return
+      }
     } catch {
       setFormError(
         isAddMode
@@ -216,10 +204,34 @@ export function EditVideoLessonModal({
     }
   }
 
+  function handleVideoUploadComplete() {
+    setHasVideoLinked(true)
+    setPendingVideoFile(null)
+    setStartPendingUpload(false)
+    onSaved()
+
+    if (isAddMode) {
+      showSnackbar('Video lesson created and video uploaded successfully')
+      onClose()
+      return
+    }
+
+    showSnackbar('Video uploaded successfully')
+  }
+
+  function handleVideoUploadingChange(isUploading: boolean) {
+    setIsVideoUploading(isUploading)
+    if (isUploading) {
+      setHasVideoLinked(false)
+    }
+  }
+
   if (!isOpen) return null
   if (!isAddMode && !lesson) return null
 
   const lessonLabel = lesson?.lessonName.trim() || lessonName.trim() || 'new lesson'
+  const uploadLessonName = lesson?.lessonName ?? lessonName
+  const addModeSubmitLabel = pendingVideoFile ? 'Add Video' : 'Add Lesson'
 
   return (
     <div
@@ -233,7 +245,7 @@ export function EditVideoLessonModal({
         }
         className="absolute inset-0 cursor-pointer bg-on-surface/40"
         onClick={handleClose}
-        disabled={isSubmitting}
+        disabled={isFormBusy}
       />
       <div
         role="dialog"
@@ -248,14 +260,14 @@ export function EditVideoLessonModal({
             </h2>
             <p className="text-body-md text-on-surface-variant">
               {isAddMode
-                ? 'Create a new lesson for the selected subject with Mux playback details.'
-                : 'Update lesson metadata or upload a new video file.'}
+                ? 'Add lesson details and choose a video file, then save once to create the lesson and upload.'
+                : 'Update lesson metadata or replace the video file.'}
             </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={isFormBusy}
             aria-label="Close"
             className="cursor-pointer rounded-full p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -271,31 +283,33 @@ export function EditVideoLessonModal({
           }}
           noValidate
         >
-          <TextField
-            id="video-lesson-name"
-            label="Lesson Name"
-            value={lessonName}
-            required
-            error={lessonNameError}
-            disabled={isSubmitting}
-            onChange={(event) => {
-              setLessonName(event.target.value)
-              if (lessonNameError) setLessonNameError(undefined)
-            }}
-          />
+          <div className="grid gap-gutter sm:grid-cols-2">
+            <TextField
+              id="video-lesson-name"
+              label="Lesson Name"
+              value={lessonName}
+              required
+              error={lessonNameError}
+              disabled={isFormBusy || isAwaitingUploadAfterCreate}
+              onChange={(event) => {
+                setLessonName(event.target.value)
+                if (lessonNameError) setLessonNameError(undefined)
+              }}
+            />
 
-          <TextField
-            id="video-lesson-module-name"
-            label="Module Name"
-            value={moduleName}
-            required
-            error={moduleNameError}
-            disabled={isSubmitting}
-            onChange={(event) => {
-              setModuleNameField(event.currentTarget.value)
-              if (moduleNameError) setModuleNameError(undefined)
-            }}
-          />
+            <TextField
+              id="video-lesson-module-name"
+              label="Module Name"
+              value={moduleName}
+              required
+              error={moduleNameError}
+              disabled={isFormBusy || isAwaitingUploadAfterCreate}
+              onChange={(event) => {
+                setModuleNameField(event.currentTarget.value)
+                if (moduleNameError) setModuleNameError(undefined)
+              }}
+            />
+          </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="video-lesson-description" className="text-label-sm text-on-surface">
@@ -304,7 +318,7 @@ export function EditVideoLessonModal({
             <textarea
               id="video-lesson-description"
               value={description}
-              disabled={isSubmitting}
+              disabled={isFormBusy || isAwaitingUploadAfterCreate}
               onChange={(event) => setDescription(event.target.value)}
               className={textareaClasses}
             />
@@ -317,7 +331,7 @@ export function EditVideoLessonModal({
             type="number"
             required
             error={sortOrderError}
-            disabled={isSubmitting}
+            disabled={isFormBusy || isAwaitingUploadAfterCreate}
             onChange={(event) => {
               setSortOrderField(event.currentTarget.value)
               if (sortOrderError) setSortOrderError(undefined)
@@ -328,7 +342,7 @@ export function EditVideoLessonModal({
             <div className="flex items-center gap-3">
               <ActiveToggle
                 isActive={isActive}
-                disabled={isSubmitting}
+                disabled={isFormBusy || isAwaitingUploadAfterCreate}
                 ariaLabel={`Toggle active status for ${lessonLabel}`}
                 onChange={setIsActive}
               />
@@ -337,7 +351,7 @@ export function EditVideoLessonModal({
             <div className="flex items-center gap-3">
               <ActiveToggle
                 isActive={isFree}
-                disabled={isSubmitting}
+                disabled={isFormBusy || isAwaitingUploadAfterCreate}
                 ariaLabel={`Toggle free status for ${lessonLabel}`}
                 onChange={setIsFree}
               />
@@ -346,69 +360,30 @@ export function EditVideoLessonModal({
           </div>
 
           {!isAddMode && lesson ? (
-            <VideoLessonVideoUpload
+            <VideoLessonThumbnailPreview
+              key={lesson.id}
+              thumbnailUrl={lesson.thumbnailImage}
               lessonName={lesson.lessonName}
-              hasExistingVideo={Boolean(lesson.muxPlaybackId?.trim())}
-              disabled={isSubmitting}
             />
           ) : null}
 
-          {isAddMode ? (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <TextField
-                  id="video-lesson-mux-playback-id"
-                  label="Mux Playback ID"
-                  value={muxPlaybackId}
-                  required
-                  error={muxPlaybackIdError}
-                  disabled={isSubmitting}
-                  onChange={(event) => {
-                    setMuxPlaybackId(event.target.value)
-                    if (muxPlaybackIdError) setMuxPlaybackIdError(undefined)
-                  }}
-                />
-                <TextField
-                  id="video-lesson-mux-asset-id"
-                  label="Mux Asset ID"
-                  value={muxAssetId}
-                  required
-                  error={muxAssetIdError}
-                  disabled={isSubmitting}
-                  onChange={(event) => {
-                    setMuxAssetId(event.target.value)
-                    if (muxAssetIdError) setMuxAssetIdError(undefined)
-                  }}
-                />
-                <TextField
-                  id="video-lesson-duration"
-                  label="Duration (seconds)"
-                  value={duration}
-                  type="number"
-                  required
-                  error={durationError}
-                  disabled={isSubmitting}
-                  onChange={(event) => {
-                    setDuration(event.target.value)
-                    if (durationError) setDurationError(undefined)
-                  }}
-                />
-                <TextField
-                  id="video-lesson-faculty-id"
-                  label="Faculty ID"
-                  value={facultyId}
-                  disabled={isSubmitting}
-                  onChange={(event) => setFacultyId(event.target.value)}
-                />
-              </div>
-              <TextField
-                id="video-lesson-thumbnail"
-                label="Thumbnail Image URL"
-                value={thumbnailImage}
-                disabled={isSubmitting}
-                onChange={(event) => setThumbnailImage(event.target.value)}
-              />
-            </>
+          {isAddMode || lesson ? (
+            <VideoLessonVideoUpload
+              key={`${uploadSubjectId}-${uploadLessonId || 'new'}`}
+              subjectId={uploadSubjectId}
+              lessonId={uploadLessonId}
+              lessonName={uploadLessonName}
+              hasExistingVideo={hasVideoLinked}
+              previousMuxAssetId={lesson?.muxAssetId}
+              pendingFile={isAddMode ? pendingVideoFile : null}
+              onPendingFileChange={
+                isAddMode && !createdLessonId ? setPendingVideoFile : undefined
+              }
+              startPendingUpload={startPendingUpload}
+              disabled={isFormBusy}
+              onUploadingChange={handleVideoUploadingChange}
+              onUploadComplete={handleVideoUploadComplete}
+            />
           ) : null}
 
           {formError ? (
@@ -423,18 +398,24 @@ export function EditVideoLessonModal({
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={isFormBusy}
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="ml-4 shadow-tier-1"
-          >
-            {isSubmitting ? 'Saving...' : isAddMode ? 'Add Lesson' : 'Save'}
-          </Button>
+          {!isAwaitingUploadAfterCreate ? (
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isFormBusy}
+              className="ml-4 shadow-tier-1"
+            >
+              {isSubmitting
+                ? 'Saving...'
+                : isAddMode
+                  ? addModeSubmitLabel
+                  : 'Save'}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

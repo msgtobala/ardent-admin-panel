@@ -7,6 +7,7 @@ interface VideoLessonPlayerProps {
   subjectId: string
   lessonId: string
   lessonLabel: string
+  isLessonActive?: boolean
   autoLoad?: boolean
   compact?: boolean
 }
@@ -26,10 +27,33 @@ function readCachedPlayback(subjectId: string, lessonId: string) {
   }
 }
 
+const INACTIVE_LESSON_PREVIEW_MESSAGE =
+  'This lesson is inactive. Turn on Active in Edit Lesson to preview the video.'
+
+function resolvePlaybackErrorMessage(
+  loadError: unknown,
+  isLessonActive: boolean,
+): string {
+  const message =
+    loadError instanceof Error
+      ? loadError.message
+      : 'Failed to load video. Please try again.'
+
+  if (
+    !isLessonActive &&
+    message.toLowerCase().includes('lesson not found')
+  ) {
+    return INACTIVE_LESSON_PREVIEW_MESSAGE
+  }
+
+  return message
+}
+
 export function VideoLessonPlayer({
   subjectId,
   lessonId,
   lessonLabel,
+  isLessonActive = true,
   autoLoad = false,
   compact = false,
 }: VideoLessonPlayerProps) {
@@ -62,17 +86,13 @@ export function VideoLessonPlayer({
       setPlaybackUrl(url)
       setHasLoaded(true)
     } catch (loadError) {
-      const message =
-        loadError instanceof Error
-          ? loadError.message
-          : 'Failed to load video. Please try again.'
-      setError(message)
+      setError(resolvePlaybackErrorMessage(loadError, isLessonActive))
       setPlaybackUrl(undefined)
       setHasLoaded(false)
     } finally {
       setIsLoading(false)
     }
-  }, [canLoad, subjectId, lessonId])
+  }, [canLoad, isLessonActive, subjectId, lessonId])
 
   useEffect(() => {
     const cached = readCachedPlayback(subjectId, lessonId)

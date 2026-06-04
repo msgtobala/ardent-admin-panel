@@ -9,6 +9,8 @@ import {
   TableHeadCell,
   TableRow,
 } from '@/components/ui/table'
+import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
+import { MUX_ASSET_STATUS } from '@/types/video-lesson'
 import { VideoLessonPlayer } from './VideoLessonPlayer'
 
 interface VideosLessonsTableProps {
@@ -64,6 +66,8 @@ function VideoLessonRow({
   onDelete: (lesson: VideoLesson) => void
 }) {
   const lessonLabel = lesson.lessonName.trim() || lesson.id
+  const canPlayVideo = lessonHasMuxVideo(lesson)
+  const isProcessing = lesson.muxAssetStatus === MUX_ASSET_STATUS.processing
 
   return (
     <TableRow>
@@ -74,13 +78,20 @@ function VideoLessonRow({
         <span className="block truncate">{lesson.moduleName || '—'}</span>
       </TableCell>
       <TableCell>
-        <VideoLessonPlayer
-          subjectId={lesson.subjectId}
-          lessonId={lesson.id}
-          lessonLabel={lessonLabel}
-          autoLoad
-          compact
-        />
+        {isProcessing ? (
+          <p className="max-w-[280px] text-label-sm text-on-surface-variant">
+            Video processing…
+          </p>
+        ) : (
+          <VideoLessonPlayer
+            subjectId={lesson.subjectId}
+            lessonId={lesson.id}
+            lessonLabel={lessonLabel}
+            isLessonActive={lesson.isActive}
+            autoLoad={canPlayVideo}
+            compact
+          />
+        )}
       </TableCell>
       <TableCell className="px-3">
         <div className="flex items-center justify-center gap-1.5">

@@ -248,6 +248,8 @@ Video subjects / courses.
 | `duration` | number |
 | `muxAssetId` | string |
 | `muxPlaybackId` | string |
+| `muxAssetStatus` | string (`idle` \| `processing` \| `ready` \| `errored`) |
+| `muxAssetError` | string (optional; set when `errored`) |
 | `timelines` | array |
 | `facultyId` | string |
 | `sortOrder` | number |

@@ -206,17 +206,28 @@ function extractPlaybackUrl(payload: unknown): string | undefined {
   return extractUrlFromFields(response)
 }
 
+const LESSON_NOT_FOUND_MESSAGE =
+  'Lesson not found. If this lesson is inactive, turn on Active in Edit Lesson to preview the video.'
+
+function normalizePlaybackErrorMessage(message: string): string {
+  const trimmed = message.trim()
+  if (trimmed.toLowerCase() === 'lesson not found.') {
+    return LESSON_NOT_FOUND_MESSAGE
+  }
+  return trimmed
+}
+
 function extractErrorMessage(payload: unknown, status: number): string {
   if (payload && typeof payload === 'object') {
     const response = payload as MuxPlaybackResponse & { message?: string }
     const callableError = response.error
 
     if (callableError && typeof callableError === 'object' && callableError.message?.trim()) {
-      return callableError.message
+      return normalizePlaybackErrorMessage(callableError.message)
     }
 
     if (response.message?.trim()) {
-      return response.message
+      return normalizePlaybackErrorMessage(response.message)
     }
   }
 
@@ -243,6 +254,14 @@ function setCachedPlaybackUrl(
     url,
     expiresAt: resolveExpiresAt(payload, url),
   })
+}
+
+export function clearMuxPlaybackCache(subjectId: string, lessonId: string): void {
+  const trimmedSubjectId = subjectId.trim()
+  const trimmedLessonId = lessonId.trim()
+  if (!trimmedSubjectId || !trimmedLessonId) return
+
+  playbackUrlCache.delete(buildCacheKey(trimmedSubjectId, trimmedLessonId))
 }
 
 export function getCachedMuxPlaybackUrl({

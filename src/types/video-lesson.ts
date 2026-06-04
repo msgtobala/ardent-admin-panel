@@ -1,3 +1,12 @@
+export const MUX_ASSET_STATUS = {
+  idle: 'idle',
+  processing: 'processing',
+  ready: 'ready',
+  errored: 'errored',
+} as const
+
+export type MuxAssetStatus = (typeof MUX_ASSET_STATUS)[keyof typeof MUX_ASSET_STATUS]
+
 export interface VideoLessonTimeline {
   id?: string
   label?: string
@@ -15,6 +24,8 @@ export interface VideoLesson {
   duration: number
   muxAssetId: string
   muxPlaybackId: string
+  muxAssetStatus: MuxAssetStatus
+  muxAssetError?: string
   timelines: VideoLessonTimeline[]
   facultyId: string
   sortOrder: number
@@ -36,6 +47,8 @@ export interface VideoLessonDocument {
   duration?: number
   muxAssetId?: string
   muxPlaybackId?: string
+  muxAssetStatus?: MuxAssetStatus
+  muxAssetError?: string
   timelines?: VideoLessonTimeline[]
   facultyId?: string
   sortOrder?: number
@@ -57,10 +70,4 @@ export interface UpdateVideoLessonInput {
   sortOrder: number
 }
 
-export interface CreateVideoLessonInput extends UpdateVideoLessonInput {
-  muxAssetId: string
-  muxPlaybackId: string
-  facultyId: string
-  thumbnailImage: string
-  duration: number
-}
+export type CreateVideoLessonInput = UpdateVideoLessonInput

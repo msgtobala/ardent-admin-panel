@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import type { NavCollapsibleGroup } from '@/config/navigation'
+import { getSidebarVisibleNavChildren, type NavCollapsibleGroup } from '@/config/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface SidebarNavGroupProps {
@@ -18,6 +18,7 @@ const childNavLinkClassName = ({ isActive }: { isActive: boolean }) =>
 export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
   const { pathname } = useLocation()
   const panelId = useId()
+  const visibleChildren = getSidebarVisibleNavChildren(group.children)
   const isChildActive = group.children.some((child) => pathname === child.path)
   const [isExpanded, setIsExpanded] = useState(isChildActive)
 
@@ -54,7 +55,7 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
 
       {isExpanded ? (
         <div id={panelId} className="flex flex-col">
-          {group.children.map((child) => (
+          {visibleChildren.map((child) => (
             <NavLink
               key={child.path}
               to={child.path}

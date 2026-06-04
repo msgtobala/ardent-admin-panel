@@ -21,7 +21,7 @@ export function VideosPageHeader({ onAddLesson }: VideosPageHeaderProps) {
         className="shrink-0 gap-2 px-6 py-3 text-body-lg font-semibold shadow-[0_10px_15px_-3px_rgba(255,73,0,0.2),0_4px_6px_-4px_rgba(255,73,0,0.2)]"
       >
         <MaterialIcon name="add" size={18} />
-        Add Lesson
+        Add Video
       </Button>
     </div>
   )
