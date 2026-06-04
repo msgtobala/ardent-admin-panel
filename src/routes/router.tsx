@@ -12,6 +12,7 @@ import PlansPage from '@/pages/PlansPage'
 import QBanksPage from '@/pages/QBanksPage'
 import QbankSubjectsPage from '@/pages/QbankSubjectsPage'
 import ClinicalVignettesPage from '@/pages/ClinicalVignettesPage'
+import McqOfTheDayPage from '@/pages/McqOfTheDayPage'
 import TenMinsConceptPage from '@/pages/TenMinsConceptPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
 import VideoChaptersPage from '@/pages/VideoChaptersPage'
@@ -76,6 +77,10 @@ export const router = createBrowserRouter([
       {
         path: 'qbank-subjects',
         element: <QbankSubjectsPage />,
+      },
+      {
+        path: 'mcq-of-the-day',
+        element: <McqOfTheDayPage />,
       },
       {
         path: '3-min-challenges',

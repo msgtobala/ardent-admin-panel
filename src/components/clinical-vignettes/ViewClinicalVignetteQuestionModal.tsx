@@ -6,7 +6,7 @@ import {
   resolveCorrectAnswerChoice,
   resolveCorrectAnswerDescription,
 } from '@/lib/qbank-question-display'
-import type { ResolvedClinicalVignetteQuestion } from '@/types/clinical-vignette'
+import type { ResolvedQbankDailyQuestion } from '@/types/qbank-daily-question'
 import type { FullQbankQuestionDetails } from '@/types/qbank-question'
 import { Button } from '@/components/ui/Button'
 import { CopyIdButton } from '@/components/ui/CopyIdButton'
@@ -14,7 +14,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface ViewClinicalVignetteQuestionModalProps {
   isOpen: boolean
-  question: ResolvedClinicalVignetteQuestion | null
+  question: ResolvedQbankDailyQuestion | null
   onClose: () => void
 }
 

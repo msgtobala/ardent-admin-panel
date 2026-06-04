@@ -123,6 +123,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'assignment',
     breadcrumbs: { parent: 'Grand Tests', current: 'Overview' },
   },
+  {
+    label: 'MCQ of the Day',
+    path: '/mcq-of-the-day',
+    icon: 'today',
+    breadcrumbs: { parent: 'MCQ of the Day', current: 'Overview' },
+  },
 ]
 
 function findNavChildByPath(pathname: string): NavChildItem | undefined {
