@@ -19,3 +19,11 @@ export type VideoLessonUploadPhase =
   | 'processing'
   | 'success'
   | 'error'
+
+/** Upload UI driven by a parent (e.g. add-lesson save then upload). */
+export interface ExternalVideoUploadState {
+  fileName: string
+  phase: 'preparing' | 'uploading' | 'processing' | 'error'
+  progress: number
+  errorMessage?: string
+}

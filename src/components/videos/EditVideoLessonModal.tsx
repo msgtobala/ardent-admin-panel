@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { uploadVideoLessonFile } from '@/lib/mux-video-upload'
+import type { ExternalVideoUploadState } from '@/types/mux-video-upload'
 import { createVideoLesson, updateVideoLesson } from '@/lib/video-lessons'
 import { MUX_ASSET_STATUS, type VideoLesson } from '@/types/video-lesson'
 import { useSnackbar } from '@/contexts/SnackbarContext'
@@ -54,9 +56,11 @@ export function EditVideoLessonModal({
   const [isFree, setIsFree] = useState(false)
   const [createdLessonId, setCreatedLessonId] = useState<string | undefined>()
   const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null)
-  const [startPendingUpload, setStartPendingUpload] = useState(false)
   const [hasVideoLinked, setHasVideoLinked] = useState(false)
   const [isVideoUploading, setIsVideoUploading] = useState(false)
+  const [externalUpload, setExternalUpload] = useState<ExternalVideoUploadState | null>(
+    null,
+  )
   const [lessonNameError, setLessonNameError] = useState<string | undefined>()
   const [moduleNameError, setModuleNameError] = useState<string | undefined>()
   const [sortOrderError, setSortOrderError] = useState<string | undefined>()
@@ -67,7 +71,11 @@ export function EditVideoLessonModal({
   const uploadLessonId = lesson?.id ?? createdLessonId ?? ''
   const isFormBusy = isSubmitting || isVideoUploading
   const isAwaitingUploadAfterCreate = Boolean(
-    isAddMode && createdLessonId && pendingVideoFile && !hasVideoLinked,
+    isAddMode &&
+      createdLessonId &&
+      pendingVideoFile &&
+      !hasVideoLinked &&
+      isVideoUploading,
   )
 
   useEffect(() => {
@@ -82,12 +90,12 @@ export function EditVideoLessonModal({
     setIsFree(initial.isFree)
     setCreatedLessonId(undefined)
     setPendingVideoFile(null)
-    setStartPendingUpload(false)
     setHasVideoLinked(
       lesson?.muxAssetStatus === MUX_ASSET_STATUS.ready ||
         Boolean(lesson?.muxPlaybackId?.trim()),
     )
     setIsVideoUploading(false)
+    setExternalUpload(null)
     setLessonNameError(undefined)
     setModuleNameError(undefined)
     setSortOrderError(undefined)
@@ -168,8 +176,35 @@ export function EditVideoLessonModal({
         onSaved()
 
         if (pendingVideoFile) {
-          setStartPendingUpload(true)
+          const fileName = pendingVideoFile.name
           showSnackbar('Lesson created. Uploading video…')
+          setIsVideoUploading(true)
+          setExternalUpload({ fileName, phase: 'preparing', progress: 0 })
+          try {
+            await uploadVideoLessonFile({
+              subjectId,
+              lessonId: newLessonId,
+              file: pendingVideoFile,
+              onProgress: (percent) => {
+                setExternalUpload({ fileName, phase: 'uploading', progress: percent })
+              },
+              onUploadComplete: () => {
+                setExternalUpload({ fileName, phase: 'processing', progress: 100 })
+              },
+            })
+            setExternalUpload(null)
+            handleVideoUploadComplete()
+          } catch (uploadError) {
+            const message =
+              uploadError instanceof Error
+                ? uploadError.message
+                : 'Video upload failed. Please try again.'
+            setExternalUpload({ fileName, phase: 'error', progress: 0, errorMessage: message })
+            setFormError(message)
+            showSnackbar(message)
+          } finally {
+            setIsVideoUploading(false)
+          }
           return
         }
 
@@ -207,7 +242,6 @@ export function EditVideoLessonModal({
   function handleVideoUploadComplete() {
     setHasVideoLinked(true)
     setPendingVideoFile(null)
-    setStartPendingUpload(false)
     onSaved()
 
     if (isAddMode) {
@@ -369,7 +403,7 @@ export function EditVideoLessonModal({
 
           {isAddMode || lesson ? (
             <VideoLessonVideoUpload
-              key={`${uploadSubjectId}-${uploadLessonId || 'new'}`}
+              key={isAddMode ? `add-${uploadSubjectId}` : `${uploadSubjectId}-${uploadLessonId}`}
               subjectId={uploadSubjectId}
               lessonId={uploadLessonId}
               lessonName={uploadLessonName}
@@ -379,7 +413,7 @@ export function EditVideoLessonModal({
               onPendingFileChange={
                 isAddMode && !createdLessonId ? setPendingVideoFile : undefined
               }
-              startPendingUpload={startPendingUpload}
+              externalUpload={externalUpload}
               disabled={isFormBusy}
               onUploadingChange={handleVideoUploadingChange}
               onUploadComplete={handleVideoUploadComplete}

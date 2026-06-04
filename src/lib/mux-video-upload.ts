@@ -27,6 +27,8 @@ const DEFAULT_STATUS_POLL_INTERVAL_MS = 3000
 
 const UPCHUNK_CHUNK_SIZE_KB = 5120
 
+const inFlightLessonUploads = new Set<string>()
+
 const createMuxDirectUploadCallable = httpsCallable<
   CreateMuxDirectUploadInput,
   CreateMuxDirectUploadResult | Record<string, unknown>
@@ -218,6 +220,12 @@ export async function uploadVideoLessonFile({
     throw new Error('Subject and lesson are required to upload a video.')
   }
 
+  const uploadKey = `${trimmedSubjectId}:${trimmedLessonId}`
+  if (inFlightLessonUploads.has(uploadKey)) {
+    throw new Error('A video upload is already in progress for this lesson.')
+  }
+  inFlightLessonUploads.add(uploadKey)
+
   try {
     await updateVideoLessonMuxAssetStatus(
       trimmedSubjectId,
@@ -273,5 +281,7 @@ export async function uploadVideoLessonFile({
     }
 
     throw new Error(message, { cause: error })
+  } finally {
+    inFlightLessonUploads.delete(uploadKey)
   }
 }

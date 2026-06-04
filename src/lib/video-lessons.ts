@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
@@ -11,6 +10,9 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { clearMuxPlaybackCache } from '@/lib/mux-playback'
+import { functions } from './functions'
 import {
   MUX_ASSET_STATUS,
   type CreateVideoLessonInput,
@@ -24,6 +26,36 @@ import { db } from './firebase'
 
 export const LESSONS_SUBCOLLECTION = 'lessons'
 export const VIDEO_LESSONS_PAGE_SIZE = 10
+
+const deleteVideoLessonCallable = httpsCallable<
+  { subjectId: string; lessonId: string },
+  { deleted: boolean; muxAssetDeleted: boolean }
+>(functions, 'deleteVideoLesson')
+
+const DELETE_LESSON_ERROR_MESSAGES: Record<string, string> = {
+  'functions/unauthenticated': 'You must be signed in as an admin.',
+  'functions/permission-denied': 'You do not have admin access.',
+  'functions/invalid-argument': 'Invalid lesson details for delete.',
+  'functions/not-found': 'Lesson was not found.',
+  'functions/internal': 'Failed to delete video lesson. Please try again.',
+}
+
+function mapDeleteLessonError(error: unknown): string {
+  if (
+    error instanceof Error &&
+    'code' in error &&
+    typeof (error as { code: string }).code === 'string'
+  ) {
+    const code = (error as { code: string }).code
+    const mapped = DELETE_LESSON_ERROR_MESSAGES[code]
+    if (mapped) return mapped
+
+    const message = error.message.trim()
+    if (message) return message
+  }
+
+  return 'Failed to delete video lesson. Please try again.'
+}
 
 function lessonsRef(subjectId: string) {
   return collection(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION)
@@ -222,6 +254,20 @@ export async function deleteVideoLesson(
   subjectId: string,
   lessonId: string,
 ): Promise<void> {
-  await deleteDoc(doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, lessonId))
-  await syncSubjectTotalLessons(subjectId)
+  const trimmedSubjectId = subjectId.trim()
+  const trimmedLessonId = lessonId.trim()
+
+  if (!trimmedSubjectId || !trimmedLessonId) {
+    throw new Error('Subject and lesson are required to delete a video lesson.')
+  }
+
+  try {
+    await deleteVideoLessonCallable({
+      subjectId: trimmedSubjectId,
+      lessonId: trimmedLessonId,
+    })
+    clearMuxPlaybackCache(trimmedSubjectId, trimmedLessonId)
+  } catch (error) {
+    throw new Error(mapDeleteLessonError(error), { cause: error })
+  }
 }

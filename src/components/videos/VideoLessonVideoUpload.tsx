@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { uploadVideoLessonFile, validateVideoLessonFile } from '@/lib/mux-video-upload'
-import type { VideoLessonUploadPhase } from '@/types/mux-video-upload'
+import type {
+  ExternalVideoUploadState,
+  VideoLessonUploadPhase,
+} from '@/types/mux-video-upload'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { CircularLoader } from '@/components/ui/CircularLoader'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -14,9 +17,10 @@ interface VideoLessonVideoUploadProps {
   disabled?: boolean
   pendingFile?: File | null
   onPendingFileChange?: (file: File | null) => void
-  startPendingUpload?: boolean
   onUploadingChange?: (isUploading: boolean) => void
   onUploadComplete?: () => void
+  /** When the parent runs upload (add-lesson flow), keeps progress UI in sync. */
+  externalUpload?: ExternalVideoUploadState | null
 }
 
 export function VideoLessonVideoUpload({
@@ -28,14 +32,13 @@ export function VideoLessonVideoUpload({
   disabled = false,
   pendingFile = null,
   onPendingFileChange,
-  startPendingUpload = false,
   onUploadingChange,
   onUploadComplete,
+  externalUpload = null,
 }: VideoLessonVideoUploadProps) {
   const { showSnackbar } = useSnackbar()
   const inputRef = useRef<HTMLInputElement>(null)
   const uploadAbortRef = useRef(false)
-  const pendingUploadStartedRef = useRef(false)
   const [isDragging, setIsDragging] = useState(false)
   const [localError, setLocalError] = useState<string | undefined>()
   const [phase, setPhase] = useState<VideoLessonUploadPhase>('idle')
@@ -45,7 +48,14 @@ export function VideoLessonVideoUpload({
   const hasLessonId = Boolean(lessonId.trim())
   const canDeferSelection = Boolean(onPendingFileChange) && !hasLessonId
   const canUploadNow = Boolean(subjectId.trim() && lessonId.trim())
-  const isBusy = phase === 'preparing' || phase === 'uploading' || phase === 'processing'
+  const displayPhase: VideoLessonUploadPhase = externalUpload?.phase ?? phase
+  const displayProgress = externalUpload?.progress ?? uploadProgress
+  const displayFileName =
+    externalUpload?.fileName ?? selectedFileName ?? pendingFile?.name
+  const isBusy =
+    displayPhase === 'preparing' ||
+    displayPhase === 'uploading' ||
+    displayPhase === 'processing'
   const canPickFile = Boolean(subjectId.trim()) && (canUploadNow || canDeferSelection)
   const isInteractionDisabled = disabled || !canPickFile || isBusy
 
@@ -54,13 +64,14 @@ export function VideoLessonVideoUpload({
   }, [isBusy, onUploadingChange])
 
   useEffect(() => {
+    if (externalUpload) return
+
     uploadAbortRef.current = false
-    pendingUploadStartedRef.current = false
     setPhase('idle')
     setUploadProgress(0)
     setLocalError(undefined)
     setSelectedFileName(undefined)
-  }, [subjectId, lessonId])
+  }, [subjectId, lessonId, externalUpload])
 
   useEffect(() => {
     if (!pendingFile || phase === 'selected') {
@@ -139,15 +150,6 @@ export function VideoLessonVideoUpload({
     ],
   )
 
-  useEffect(() => {
-    if (!startPendingUpload || !pendingFile || !canUploadNow || pendingUploadStartedRef.current) {
-      return
-    }
-
-    pendingUploadStartedRef.current = true
-    void handleUploadFile(pendingFile)
-  }, [startPendingUpload, pendingFile, canUploadNow, handleUploadFile])
-
   function handleFileSelected(selectedFile: File | null) {
     if (!selectedFile || isInteractionDisabled) return
 
@@ -220,22 +222,22 @@ export function VideoLessonVideoUpload({
   }
 
   const lessonLabel = lessonName.trim() || 'this lesson'
-  const displayError = localError
+  const displayError = externalUpload?.errorMessage ?? localError
 
   let statusMessage = 'Click to upload or drag and drop'
-  if (phase === 'selected') {
-    statusMessage = selectedFileName
-      ? `${selectedFileName} — uploads when you save`
+  if (displayPhase === 'selected') {
+    statusMessage = displayFileName
+      ? `${displayFileName} — uploads when you save`
       : 'Video selected — uploads when you save'
   } else if (!canPickFile) {
     statusMessage = 'Select a subject before choosing a video'
-  } else if (phase === 'preparing') {
+  } else if (displayPhase === 'preparing') {
     statusMessage = 'Preparing upload...'
-  } else if (phase === 'uploading') {
-    statusMessage = `Uploading ${uploadProgress}%`
-  } else if (phase === 'processing') {
+  } else if (displayPhase === 'uploading') {
+    statusMessage = `Uploading ${displayProgress}%`
+  } else if (displayPhase === 'processing') {
     statusMessage = 'Processing video on Mux...'
-  } else if (phase === 'success') {
+  } else if (displayPhase === 'success') {
     statusMessage = 'Video is ready for playback'
   }
 
@@ -269,7 +271,7 @@ export function VideoLessonVideoUpload({
         </div>
       ) : null}
 
-      {phase === 'selected' ? (
+      {displayPhase === 'selected' && !externalUpload ? (
         <div
           className="flex items-center justify-between gap-3 rounded-input border border-border-subtle bg-surface-container-low px-4 py-3"
           role="status"
@@ -281,7 +283,7 @@ export function VideoLessonVideoUpload({
             <div className="flex min-w-0 flex-col gap-0.5">
               <p className="text-body-md font-medium text-on-surface">Video ready to upload</p>
               <p className="truncate text-caption text-on-surface-variant">
-                {selectedFileName ?? pendingFile?.name ?? 'Selected file'} for {lessonLabel}
+                {displayFileName ?? 'Selected file'} for {lessonLabel}
               </p>
             </div>
           </div>
@@ -297,7 +299,7 @@ export function VideoLessonVideoUpload({
         </div>
       ) : null}
 
-      {phase === 'success' ? (
+      {displayPhase === 'success' ? (
         <div
           className="flex items-center gap-3 rounded-input border border-border-subtle bg-surface-container-low px-4 py-3"
           role="status"
@@ -308,15 +310,15 @@ export function VideoLessonVideoUpload({
           <div className="flex min-w-0 flex-col gap-0.5">
             <p className="text-body-md font-medium text-on-surface">Upload complete</p>
             <p className="text-caption text-on-surface-variant">
-              {selectedFileName
-                ? `${selectedFileName} is linked to ${lessonLabel}.`
+              {displayFileName
+                ? `${displayFileName} is linked to ${lessonLabel}.`
                 : `Video is linked to ${lessonLabel}.`}
             </p>
           </div>
         </div>
       ) : null}
 
-      {phase !== 'success' ? (
+      {displayPhase !== 'success' ? (
         <div
           role="button"
           tabIndex={isInteractionDisabled ? -1 : 0}
@@ -333,7 +335,7 @@ export function VideoLessonVideoUpload({
             'border-outline-variant bg-surface-container-low',
             isDragging ? 'border-primary-action bg-row-hover' : '',
             isInteractionDisabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-row-hover',
-            displayError && phase === 'error' ? 'border-error-red' : '',
+            displayError && displayPhase === 'error' ? 'border-error-red' : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -360,13 +362,13 @@ export function VideoLessonVideoUpload({
             MP4, MOV, or WebM (max. 500MB)
           </p>
 
-          {phase === 'uploading' ? (
+          {displayPhase === 'uploading' ? (
             <div className="mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-surface-white">
               <div
                 className="h-full rounded-full bg-primary-action transition-all duration-200"
-                style={{ width: `${uploadProgress}%` }}
+                style={{ width: `${displayProgress}%` }}
                 role="progressbar"
-                aria-valuenow={uploadProgress}
+                aria-valuenow={displayProgress}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label="Upload progress"
