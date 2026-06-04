@@ -8,6 +8,9 @@ import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { TextField } from '@/components/ui/TextField'
+import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
+import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
+import { VideoLessonPlayer } from '@/components/videos/VideoLessonPlayer'
 import { VideoLessonThumbnailPreview } from '@/components/videos/VideoLessonThumbnailPreview'
 import { VideoLessonVideoUpload } from '@/components/videos/VideoLessonVideoUpload'
 
@@ -266,6 +269,17 @@ export function EditVideoLessonModal({
   const lessonLabel = lesson?.lessonName.trim() || lessonName.trim() || 'new lesson'
   const uploadLessonName = lesson?.lessonName ?? lessonName
   const addModeSubmitLabel = pendingVideoFile ? 'Add Video' : 'Add Lesson'
+  const isReplacingOrUploadingVideo = isVideoUploading || Boolean(externalUpload)
+  const showEditModalPlayer =
+    !isAddMode &&
+    lesson &&
+    lessonHasMuxVideo(lesson) &&
+    !isReplacingOrUploadingVideo
+  const showEditModalProcessingStatus =
+    !isAddMode &&
+    lesson &&
+    lesson.muxAssetStatus === MUX_ASSET_STATUS.processing &&
+    !isReplacingOrUploadingVideo
 
   return (
     <div
@@ -295,7 +309,7 @@ export function EditVideoLessonModal({
             <p className="text-body-md text-on-surface-variant">
               {isAddMode
                 ? 'Add lesson details and choose a video file, then save once to create the lesson and upload.'
-                : 'Update lesson metadata or replace the video file.'}
+                : 'Update lesson metadata, preview the video, or replace the video file.'}
             </p>
           </div>
           <button
@@ -398,6 +412,21 @@ export function EditVideoLessonModal({
               key={lesson.id}
               thumbnailUrl={lesson.thumbnailImage}
               lessonName={lesson.lessonName}
+            />
+          ) : null}
+
+          {showEditModalProcessingStatus ? (
+            <VideoLessonMuxStatus lesson={lesson} />
+          ) : null}
+
+          {showEditModalPlayer ? (
+            <VideoLessonPlayer
+              key={`${lesson.subjectId}-${lesson.id}-${lesson.muxPlaybackId}`}
+              subjectId={lesson.subjectId}
+              lessonId={lesson.id}
+              lessonLabel={lessonLabel}
+              isLessonActive={isActive}
+              autoLoad
             />
           ) : null}
 

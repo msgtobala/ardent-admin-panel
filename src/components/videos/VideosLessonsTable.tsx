@@ -9,9 +9,7 @@ import {
   TableHeadCell,
   TableRow,
 } from '@/components/ui/table'
-import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
-import { MUX_ASSET_STATUS } from '@/types/video-lesson'
-import { VideoLessonPlayer } from './VideoLessonPlayer'
+import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
 
 interface VideosLessonsTableProps {
   lessons: VideoLesson[]
@@ -32,7 +30,7 @@ interface VideosLessonsTableProps {
   onDelete: (lesson: VideoLesson) => void
 }
 
-const LESSON_COLUMN_WIDTHS = [undefined, undefined, 'w-[300px]', 'w-[120px]']
+const LESSON_COLUMN_WIDTHS = [undefined, undefined, 'w-[220px]', 'w-[120px]']
 
 const actionButtonClassName =
   'cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
@@ -47,7 +45,7 @@ function VideosLessonsSkeletonRows() {
         <div className="h-4 w-40 animate-pulse rounded bg-surface-container" />
       </TableCell>
       <TableCell>
-        <div className="aspect-video w-full max-w-[280px] animate-pulse rounded-input bg-surface-container" />
+        <div className="h-5 w-36 animate-pulse rounded bg-surface-container" />
       </TableCell>
       <TableCell>
         <div className="mx-auto h-8 w-16 animate-pulse rounded-lg bg-surface-container" />
@@ -66,8 +64,6 @@ function VideoLessonRow({
   onDelete: (lesson: VideoLesson) => void
 }) {
   const lessonLabel = lesson.lessonName.trim() || lesson.id
-  const canPlayVideo = lessonHasMuxVideo(lesson)
-  const isProcessing = lesson.muxAssetStatus === MUX_ASSET_STATUS.processing
 
   return (
     <TableRow>
@@ -78,20 +74,7 @@ function VideoLessonRow({
         <span className="block truncate">{lesson.moduleName || '—'}</span>
       </TableCell>
       <TableCell>
-        {isProcessing ? (
-          <p className="max-w-[280px] text-label-sm text-on-surface-variant">
-            Video processing…
-          </p>
-        ) : (
-          <VideoLessonPlayer
-            subjectId={lesson.subjectId}
-            lessonId={lesson.id}
-            lessonLabel={lessonLabel}
-            isLessonActive={lesson.isActive}
-            autoLoad={canPlayVideo}
-            compact
-          />
-        )}
+        <VideoLessonMuxStatus lesson={lesson} compact />
       </TableCell>
       <TableCell className="px-3">
         <div className="flex items-center justify-center gap-1.5">
@@ -176,7 +159,7 @@ export function VideosLessonsTable({
         <TableHeaderRow>
           <TableHeadCell>Lesson Name</TableHeadCell>
           <TableHeadCell>Module Name</TableHeadCell>
-          <TableHeadCell>Video</TableHeadCell>
+          <TableHeadCell>Status</TableHeadCell>
           <TableHeadCell align="center" className="px-3">
             Actions
           </TableHeadCell>

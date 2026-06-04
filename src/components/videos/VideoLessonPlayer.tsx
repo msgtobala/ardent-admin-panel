@@ -122,6 +122,10 @@ export function VideoLessonPlayer({
   }, [playbackUrl])
 
   const isHlsStream = playbackUrl?.includes('.m3u8')
+  const isPreparingPlayback = autoLoad && canLoad && !hasLoaded && !error && !isLoading
+  const showPlaybackStage = isLoading || isPreparingPlayback || Boolean(error) || (hasLoaded && playbackUrl)
+  const playbackStageClasses =
+    'relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-input border border-border-subtle bg-black'
 
   if (compact) {
     return (
@@ -185,34 +189,42 @@ export function VideoLessonPlayer({
         ) : null}
       </div>
 
-      {isLoading ? (
-        <div
-          className="flex min-h-[160px] items-center justify-center rounded-input bg-surface-white"
-          aria-busy="true"
-          aria-live="polite"
-        >
-          <CircularLoader size="md" label="Loading video" />
-        </div>
-      ) : null}
-
-      {error ? (
-        <p className="text-body-md text-error-red" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {hasLoaded && playbackUrl ? (
+      {showPlaybackStage ? (
         <div className="flex flex-col gap-2">
-          <video
-            ref={videoRef}
-            controls
-            playsInline
-            className="max-h-80 w-full rounded-input bg-black"
-            aria-label={`Video for ${lessonLabel}`}
+          <div
+            className={[
+              playbackStageClasses,
+              isLoading || isPreparingPlayback ? 'bg-surface-container-low' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-busy={isLoading || isPreparingPlayback}
+            aria-live="polite"
           >
-            <source src={playbackUrl} type={isHlsStream ? 'application/x-mpegURL' : undefined} />
-          </video>
-          {isHlsStream ? (
+            {isLoading || isPreparingPlayback ? (
+              <CircularLoader size="md" label="Loading video" />
+            ) : null}
+
+            {error ? (
+              <p className="px-4 text-center text-body-md text-error-red" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            {!isLoading && !error && hasLoaded && playbackUrl ? (
+              <video
+                ref={videoRef}
+                controls
+                playsInline
+                className="absolute inset-0 h-full w-full object-contain"
+                aria-label={`Video for ${lessonLabel}`}
+              >
+                <source src={playbackUrl} type={isHlsStream ? 'application/x-mpegURL' : undefined} />
+              </video>
+            ) : null}
+          </div>
+
+          {hasLoaded && playbackUrl && isHlsStream ? (
             <p className="text-label-sm text-on-surface-variant">
               If playback does not start in this browser,{' '}
               <a
