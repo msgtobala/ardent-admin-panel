@@ -270,16 +270,21 @@ export function EditVideoLessonModal({
   const uploadLessonName = lesson?.lessonName ?? lessonName
   const addModeSubmitLabel = pendingVideoFile ? 'Add Video' : 'Add Lesson'
   const isReplacingOrUploadingVideo = isVideoUploading || Boolean(externalUpload)
+  const editModalMuxStatusLesson =
+    lesson && isReplacingOrUploadingVideo
+      ? { ...lesson, muxAssetStatus: MUX_ASSET_STATUS.processing, muxAssetError: undefined }
+      : lesson
+  const showEditModalMuxStatus =
+    !isAddMode &&
+    editModalMuxStatusLesson &&
+    (isReplacingOrUploadingVideo ||
+      editModalMuxStatusLesson.muxAssetStatus === MUX_ASSET_STATUS.processing)
   const showEditModalPlayer =
     !isAddMode &&
     lesson &&
     lessonHasMuxVideo(lesson) &&
-    !isReplacingOrUploadingVideo
-  const showEditModalProcessingStatus =
-    !isAddMode &&
-    lesson &&
-    lesson.muxAssetStatus === MUX_ASSET_STATUS.processing &&
-    !isReplacingOrUploadingVideo
+    !isReplacingOrUploadingVideo &&
+    lesson.muxAssetStatus !== MUX_ASSET_STATUS.processing
 
   return (
     <div
@@ -415,8 +420,8 @@ export function EditVideoLessonModal({
             />
           ) : null}
 
-          {showEditModalProcessingStatus ? (
-            <VideoLessonMuxStatus lesson={lesson} />
+          {showEditModalMuxStatus ? (
+            <VideoLessonMuxStatus lesson={editModalMuxStatusLesson} />
           ) : null}
 
           {showEditModalPlayer ? (

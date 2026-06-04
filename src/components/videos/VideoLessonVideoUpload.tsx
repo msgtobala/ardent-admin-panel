@@ -97,6 +97,7 @@ export function VideoLessonVideoUpload({
       setSelectedFileName(file.name)
       setUploadProgress(0)
       setPhase('preparing')
+      onUploadingChange?.(true)
 
       try {
         setPhase('uploading')
@@ -147,6 +148,7 @@ export function VideoLessonVideoUpload({
       showSnackbar,
       subjectId,
       previousMuxAssetId,
+      onUploadingChange,
     ],
   )
 
@@ -254,7 +256,7 @@ export function VideoLessonVideoUpload({
         </p>
       </div>
 
-      {previousMuxAssetId?.trim() && hasExistingVideo && phase !== 'success' ? (
+      {previousMuxAssetId?.trim() && hasExistingVideo && !isBusy && phase !== 'success' ? (
         <div
           className="flex items-center gap-3 rounded-input border border-border-subtle bg-surface-container-low px-4 py-3"
           role="status"
