@@ -10,9 +10,12 @@ import GrandTestsPage from '@/pages/GrandTestsPage'
 import LoginPage from '@/pages/LoginPage'
 import PlansPage from '@/pages/PlansPage'
 import QBanksPage from '@/pages/QBanksPage'
+import QbankSubjectsPage from '@/pages/QbankSubjectsPage'
 import ClinicalVignettesPage from '@/pages/ClinicalVignettesPage'
 import TenMinsConceptPage from '@/pages/TenMinsConceptPage'
 import ThreeMinChallengesPage from '@/pages/ThreeMinChallengesPage'
+import VideoChaptersPage from '@/pages/VideoChaptersPage'
+import VideosPage from '@/pages/VideosPage'
 import StudentsPage from '@/pages/StudentsPage'
 
 export const router = createBrowserRouter([
@@ -71,6 +74,10 @@ export const router = createBrowserRouter([
         element: <QBanksPage />,
       },
       {
+        path: 'qbank-subjects',
+        element: <QbankSubjectsPage />,
+      },
+      {
         path: '3-min-challenges',
         element: <ThreeMinChallengesPage />,
       },
@@ -81,6 +88,14 @@ export const router = createBrowserRouter([
       {
         path: 'clinical-vignettes',
         element: <ClinicalVignettesPage />,
+      },
+      {
+        path: 'video-chapters',
+        element: <VideoChaptersPage />,
+      },
+      {
+        path: 'videos',
+        element: <VideosPage />,
       },
     ],
   },

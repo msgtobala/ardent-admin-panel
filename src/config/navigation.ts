@@ -48,6 +48,42 @@ export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
       },
     ],
   },
+  {
+    label: 'Videos',
+    icon: 'video_library',
+    children: [
+      {
+        label: 'Video Subjects',
+        path: '/video-chapters',
+        icon: 'topic',
+        breadcrumbs: { parent: 'Video Subjects', current: 'Overview' },
+      },
+      {
+        label: 'Videos',
+        path: '/videos',
+        icon: 'smart_display',
+        breadcrumbs: { parent: 'Videos', current: 'Overview' },
+      },
+    ],
+  },
+  {
+    label: 'QBanks',
+    icon: 'quiz',
+    children: [
+      {
+        label: 'Qbank Subjects',
+        path: '/qbank-subjects',
+        icon: 'category',
+        breadcrumbs: { parent: 'Qbank Subjects', current: 'Overview' },
+      },
+      {
+        label: 'QBanks',
+        path: '/qbanks',
+        icon: 'library_books',
+        breadcrumbs: { parent: 'QBanks', current: 'Overview' },
+      },
+    ],
+  },
 ]
 
 export const NAV_ITEMS: NavItem[] = [
@@ -86,12 +122,6 @@ export const NAV_ITEMS: NavItem[] = [
     path: '/grand-tests',
     icon: 'assignment',
     breadcrumbs: { parent: 'Grand Tests', current: 'Overview' },
-  },
-  {
-    label: 'QBanks',
-    path: '/qbanks',
-    icon: 'quiz',
-    breadcrumbs: { parent: 'QBanks', current: 'Overview' },
   },
 ]
 
