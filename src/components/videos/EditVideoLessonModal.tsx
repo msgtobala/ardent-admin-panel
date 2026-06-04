@@ -7,6 +7,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { SelectField, type SelectOption } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
 import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
@@ -18,7 +19,7 @@ interface EditVideoLessonModalProps {
   isOpen: boolean
   lesson: VideoLesson | null
   subjectId?: string
-  defaultModuleName?: string
+  moduleNameOptions: SelectOption[]
   onClose: () => void
   onSaved: () => void
 }
@@ -26,15 +27,11 @@ interface EditVideoLessonModalProps {
 const textareaClasses =
   'min-h-[100px] w-full resize-y rounded-input border border-border-subtle bg-surface-white px-[13px] py-[10px] text-body-md text-on-surface shadow-tier-1 placeholder:text-on-surface-variant focus:border-primary-action focus:outline-none focus:ring-2 focus:ring-focus-ring'
 
-function getInitialFormState(
-  lesson: VideoLesson | null,
-  defaultModuleName?: string,
-) {
+function getInitialFormState(lesson: VideoLesson | null) {
   return {
     lessonName: lesson?.lessonName ?? '',
-    moduleName: lesson?.moduleName ?? defaultModuleName ?? '',
+    moduleName: lesson?.moduleName ?? '',
     description: lesson?.description ?? '',
-    sortOrder: lesson?.sortOrder?.toString() ?? '0',
     isActive: lesson?.isActive ?? false,
     isFree: lesson?.isFree ?? false,
   }
@@ -44,7 +41,7 @@ export function EditVideoLessonModal({
   isOpen,
   lesson,
   subjectId,
-  defaultModuleName,
+  moduleNameOptions,
   onClose,
   onSaved,
 }: EditVideoLessonModalProps) {
@@ -54,7 +51,6 @@ export function EditVideoLessonModal({
   const [lessonName, setLessonName] = useState('')
   const [moduleName, setModuleNameField] = useState('')
   const [description, setDescription] = useState('')
-  const [sortOrder, setSortOrderField] = useState('0')
   const [isActive, setIsActive] = useState(false)
   const [isFree, setIsFree] = useState(false)
   const [createdLessonId, setCreatedLessonId] = useState<string | undefined>()
@@ -66,8 +62,8 @@ export function EditVideoLessonModal({
   )
   const [lessonNameError, setLessonNameError] = useState<string | undefined>()
   const [moduleNameError, setModuleNameError] = useState<string | undefined>()
-  const [sortOrderError, setSortOrderError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
+  const useModuleDropdown = moduleNameOptions.length > 0
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const uploadSubjectId = lesson?.subjectId ?? subjectId ?? ''
@@ -84,11 +80,10 @@ export function EditVideoLessonModal({
   useEffect(() => {
     if (!isOpen) return
 
-    const initial = getInitialFormState(lesson, defaultModuleName)
+    const initial = getInitialFormState(lesson)
     setLessonName(initial.lessonName)
     setModuleNameField(initial.moduleName)
     setDescription(initial.description)
-    setSortOrderField(initial.sortOrder)
     setIsActive(initial.isActive)
     setIsFree(initial.isFree)
     setCreatedLessonId(undefined)
@@ -101,10 +96,9 @@ export function EditVideoLessonModal({
     setExternalUpload(null)
     setLessonNameError(undefined)
     setModuleNameError(undefined)
-    setSortOrderError(undefined)
     setFormError(undefined)
     setIsSubmitting(false)
-  }, [isOpen, lesson, defaultModuleName])
+  }, [isOpen, lesson])
 
   const handleClose = useCallback(() => {
     if (isFormBusy) return
@@ -131,7 +125,6 @@ export function EditVideoLessonModal({
     let valid = true
     const trimmedLessonName = lessonName.trim()
     const trimmedModuleName = moduleName.trim()
-    const parsedSortOrder = Number(sortOrder)
 
     if (!trimmedLessonName) {
       setLessonNameError('Lesson name is required')
@@ -141,17 +134,12 @@ export function EditVideoLessonModal({
     }
 
     if (!trimmedModuleName) {
-      setModuleNameError('Module name is required')
+      setModuleNameError(
+        useModuleDropdown ? 'Module is required' : 'Module name is required',
+      )
       valid = false
     } else {
       setModuleNameError(undefined)
-    }
-
-    if (!Number.isFinite(parsedSortOrder) || parsedSortOrder < 0) {
-      setSortOrderError('Sort order must be a non-negative number')
-      valid = false
-    } else {
-      setSortOrderError(undefined)
     }
 
     return valid
@@ -169,7 +157,6 @@ export function EditVideoLessonModal({
       description: description.trim(),
       isActive,
       isFree,
-      sortOrder: Number(sortOrder),
     }
 
     try {
@@ -350,19 +337,43 @@ export function EditVideoLessonModal({
               }}
             />
 
-            <TextField
-              id="video-lesson-module-name"
-              label="Module Name"
-              value={moduleName}
-              required
-              error={moduleNameError}
-              disabled={isFormBusy || isAwaitingUploadAfterCreate}
-              onChange={(event) => {
-                setModuleNameField(event.currentTarget.value)
-                if (moduleNameError) setModuleNameError(undefined)
-              }}
-            />
+            {useModuleDropdown ? (
+              <SelectField
+                id="video-lesson-module-name"
+                label="Module Name"
+                value={moduleName}
+                options={moduleNameOptions}
+                required
+                error={moduleNameError}
+                disabled={isFormBusy || isAwaitingUploadAfterCreate}
+                placeholder="Select module"
+                onChange={(value) => {
+                  setModuleNameField(value)
+                  if (moduleNameError) setModuleNameError(undefined)
+                }}
+              />
+            ) : (
+              <TextField
+                id="video-lesson-module-name"
+                label="Module Name"
+                value={moduleName}
+                required
+                error={moduleNameError}
+                disabled={isFormBusy || isAwaitingUploadAfterCreate}
+                onChange={(event) => {
+                  setModuleNameField(event.currentTarget.value)
+                  if (moduleNameError) setModuleNameError(undefined)
+                }}
+              />
+            )}
           </div>
+
+          {!useModuleDropdown ? (
+            <p className="text-caption text-on-surface-variant">
+              No modules exist for this subject yet. Enter a module name for the first
+              lesson.
+            </p>
+          ) : null}
 
           <div className="flex flex-col gap-1">
             <label htmlFor="video-lesson-description" className="text-label-sm text-on-surface">
@@ -376,20 +387,6 @@ export function EditVideoLessonModal({
               className={textareaClasses}
             />
           </div>
-
-          <TextField
-            id="video-lesson-sort-order"
-            label="Sort Order"
-            value={sortOrder}
-            type="number"
-            required
-            error={sortOrderError}
-            disabled={isFormBusy || isAwaitingUploadAfterCreate}
-            onChange={(event) => {
-              setSortOrderField(event.currentTarget.value)
-              if (sortOrderError) setSortOrderError(undefined)
-            }}
-          />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-8">
             <div className="flex items-center gap-3">

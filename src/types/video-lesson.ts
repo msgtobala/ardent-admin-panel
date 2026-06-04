@@ -67,7 +67,6 @@ export interface UpdateVideoLessonInput {
   description: string
   isActive: boolean
   isFree: boolean
-  sortOrder: number
 }
 
 export type CreateVideoLessonInput = UpdateVideoLessonInput

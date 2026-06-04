@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
@@ -154,6 +155,11 @@ export async function createVideoLesson(
   subjectId: string,
   input: CreateVideoLessonInput,
 ): Promise<string> {
+  const existingLessons = await fetchVideoLessons(subjectId)
+  const maxSortOrder = existingLessons.reduce(
+    (max, lesson) => Math.max(max, lesson.sortOrder),
+    -1,
+  )
   const lessonRef = doc(lessonsRef(subjectId))
   const now = serverTimestamp()
 
@@ -170,7 +176,7 @@ export async function createVideoLesson(
     muxAssetError: '',
     timelines: [],
     facultyId: '',
-    sortOrder: input.sortOrder,
+    sortOrder: maxSortOrder + 1,
     rating: 0,
     isActive: input.isActive,
     isFree: input.isFree,
@@ -195,9 +201,29 @@ export async function updateVideoLesson(
     description: input.description.trim(),
     isActive: input.isActive,
     isFree: input.isFree,
-    sortOrder: input.sortOrder,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function updateVideoLessonsSortOrder(
+  subjectId: string,
+  updates: { id: string; sortOrder: number }[],
+): Promise<void> {
+  if (!subjectId.trim() || updates.length === 0) return
+
+  const batch = writeBatch(db)
+
+  for (const update of updates) {
+    batch.update(
+      doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, update.id),
+      {
+        sortOrder: update.sortOrder,
+        updatedAt: serverTimestamp(),
+      },
+    )
+  }
+
+  await batch.commit()
 }
 
 export async function updateVideoLessonMuxAssetStatus(

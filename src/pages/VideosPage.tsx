@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { DeleteVideoLessonModal } from '@/components/videos/DeleteVideoLessonModal'
 import { EditVideoLessonModal } from '@/components/videos/EditVideoLessonModal'
+import { ReorderVideoLessonsModal } from '@/components/videos/ReorderVideoLessonsModal'
 import { VideosLessonsTable } from '@/components/videos/VideosLessonsTable'
 import { VideosPageHeader } from '@/components/videos/VideosPageHeader'
 import { useSnackbar } from '@/contexts/SnackbarContext'
+import { buildVideoLessonModuleOptions } from '@/lib/video-lesson-modules'
 import { useVideosPage } from '@/hooks/useVideosPage'
 import type { VideoLesson } from '@/types/video-lesson'
 import { SelectField, type SelectOption } from '@/components/ui/SelectField'
@@ -18,12 +20,14 @@ type VideoLessonModalState =
 export default function VideosPage() {
   const { showSnackbar } = useSnackbar()
   const [modalState, setModalState] = useState<VideoLessonModalState>(null)
+  const [isReorderOpen, setIsReorderOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const {
     subjects,
     selectedSubjectId,
     selectedSubject,
+    allLessons,
     lessons,
     isLoadingSubjects,
     isLoadingLessons,
@@ -63,6 +67,19 @@ export default function VideosPage() {
     setModalState({ mode: 'add' })
   }
 
+  function handleOpenReorderModal() {
+    if (!selectedSubjectId) {
+      showSnackbar('Select a video subject before editing sort order.')
+      return
+    }
+
+    setIsReorderOpen(true)
+  }
+
+  function handleCloseReorderModal() {
+    setIsReorderOpen(false)
+  }
+
   function handleEditLesson(lesson: VideoLesson) {
     setModalState({ mode: 'edit', lesson })
   }
@@ -89,9 +106,18 @@ export default function VideosPage() {
   const editingLesson = modalState?.mode === 'edit' ? modalState.lesson : null
   const deletingLesson = modalState?.mode === 'delete' ? modalState.lesson : null
 
+  const moduleNameOptions = useMemo(
+    () =>
+      buildVideoLessonModuleOptions(allLessons, editingLesson?.moduleName),
+    [allLessons, editingLesson?.moduleName],
+  )
+
   return (
     <div className="flex flex-col gap-gutter">
-      <VideosPageHeader onAddLesson={handleAddLesson} />
+      <VideosPageHeader
+        onAddLesson={handleAddLesson}
+        onEditSortOrder={handleOpenReorderModal}
+      />
 
       <section className="rounded-xl border border-border-subtle bg-surface-white px-gutter py-gutter shadow-tier-1">
         {subjectsError ? (
@@ -150,8 +176,21 @@ export default function VideosPage() {
         isOpen={isFormModalOpen}
         lesson={editingLesson}
         subjectId={modalState?.mode === 'add' ? selectedSubjectId : undefined}
-        defaultModuleName={selectedSubject?.subjectName}
+        moduleNameOptions={moduleNameOptions}
         onClose={handleCloseModal}
+        onSaved={handleLessonSaved}
+      />
+
+      <ReorderVideoLessonsModal
+        key={
+          isReorderOpen
+            ? `reorder-video-lessons-open-${selectedSubjectId}`
+            : 'reorder-video-lessons-closed'
+        }
+        isOpen={isReorderOpen}
+        subjectId={selectedSubjectId}
+        subjectName={selectedSubject?.subjectName ?? ''}
+        onClose={handleCloseReorderModal}
         onSaved={handleLessonSaved}
       />
 

@@ -145,6 +145,7 @@ export function useVideosPage(refreshKey = 0) {
     subjects,
     selectedSubjectId,
     selectedSubject,
+    allLessons,
     lessons,
     isLoadingSubjects,
     isLoadingLessons,
