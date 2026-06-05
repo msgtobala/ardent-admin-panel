@@ -31,6 +31,84 @@ export interface QbankQuestionOption {
   questionRefId: string
   documentId: string
   label: string
+  questionText: string
+}
+
+export interface QbankQuestionLocation {
+  subjectRefId: string
+  chapterRefId: string
+  questionRefId: string
+  documentId: string
+}
+
+async function fetchQbankChapterPaths(): Promise<
+  Array<Pick<QbankQuestionLocation, 'subjectRefId' | 'chapterRefId'>>
+> {
+  const subjectsSnapshot = await getDocs(collection(db, QBANKS_COLLECTION))
+  const chapterPathGroups = await Promise.all(
+    subjectsSnapshot.docs.map(async (subjectDoc) => {
+      const chaptersSnapshot = await getDocs(
+        collection(db, QBANKS_COLLECTION, subjectDoc.id, 'chapters'),
+      )
+
+      return chaptersSnapshot.docs.map((chapterDoc) => ({
+        subjectRefId: subjectDoc.id,
+        chapterRefId: chapterDoc.id,
+      }))
+    }),
+  )
+
+  return chapterPathGroups.flat()
+}
+
+function resolveQuestionRefId(
+  documentId: string,
+  data: DocumentData,
+): string {
+  return typeof data.questionRefId === 'string' && data.questionRefId.trim()
+    ? data.questionRefId.trim()
+    : documentId
+}
+
+export async function resolveQbankQuestionLocationsByDocumentIds(
+  documentIds: string[],
+): Promise<Map<string, QbankQuestionLocation>> {
+  const uniqueDocumentIds = [...new Set(documentIds)]
+  const locations = new Map<string, QbankQuestionLocation>()
+
+  if (uniqueDocumentIds.length === 0) return locations
+
+  const unresolvedDocumentIds = new Set(uniqueDocumentIds)
+  const chapterPaths = await fetchQbankChapterPaths()
+
+  for (const chapterPath of chapterPaths) {
+    if (unresolvedDocumentIds.size === 0) break
+
+    await Promise.all(
+      [...unresolvedDocumentIds].map(async (documentId) => {
+        const questionDocument = await fetchQbankQuestionDocument(
+          chapterPath.subjectRefId,
+          chapterPath.chapterRefId,
+          documentId,
+        )
+
+        if (!questionDocument) return
+
+        locations.set(documentId, {
+          subjectRefId: chapterPath.subjectRefId,
+          chapterRefId: chapterPath.chapterRefId,
+          questionRefId: resolveQuestionRefId(
+            questionDocument.documentId,
+            questionDocument.data,
+          ),
+          documentId: questionDocument.documentId,
+        })
+        unresolvedDocumentIds.delete(documentId)
+      }),
+    )
+  }
+
+  return locations
 }
 
 export async function fetchQbankSubjectName(subjectRefId: string): Promise<string> {
@@ -56,7 +134,7 @@ export async function fetchQbankChapterName(
   return typeof name === 'string' && name.trim() ? name.trim() : '—'
 }
 
-async function fetchQbankQuestionDocument(
+export async function fetchQbankQuestionDocument(
   subjectRefId: string,
   chapterRefId: string,
   questionRefId: string,
@@ -388,6 +466,7 @@ export async function fetchQbankQuestionOptions(
       return {
         documentId: questionDoc.id,
         questionRefId,
+        questionText,
         label: `${questionRefId} — ${truncated}`,
       }
     })
