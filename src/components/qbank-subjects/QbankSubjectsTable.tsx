@@ -31,7 +31,14 @@ interface QbankSubjectsTableProps {
   onEdit: (subject: QbankSubject) => void
 }
 
-const COLUMN_WIDTHS = ['w-[76px]', undefined, 'w-[120px]', 'w-[140px]', 'w-[148px]']
+const COLUMN_WIDTHS = [
+  'w-[100px]',
+  'w-[76px]',
+  undefined,
+  'w-[120px]',
+  'w-[140px]',
+  'w-[148px]',
+]
 
 const actionButtonClassName =
   'cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
@@ -39,6 +46,9 @@ const actionButtonClassName =
 function QbankSubjectsSkeletonRows() {
   return Array.from({ length: QBANK_SUBJECTS_PAGE_SIZE }).map((_, index) => (
     <TableRow key={`qbank-subject-skeleton-${index}`} aria-hidden>
+      <TableCell>
+        <div className="mx-auto h-4 w-8 animate-pulse rounded bg-surface-container" />
+      </TableCell>
       <TableCell>
         <div className="size-10 animate-pulse rounded-lg bg-surface-container" />
       </TableCell>
@@ -69,6 +79,9 @@ function QbankSubjectRow({
 }) {
   return (
     <TableRow>
+      <TableCell className="text-center text-body-md text-text-black">
+        {subject.sortOrder ?? '—'}
+      </TableCell>
       <TableCell>
         <VideoSubjectIcon
           iconUrl={subject.icon}
@@ -138,8 +151,9 @@ export function QbankSubjectsTable({
 
   return (
     <DataTable
-      columnCount={5}
+      columnCount={6}
       columnWidths={COLUMN_WIDTHS}
+      minWidth={720}
       rowCount={subjects.length}
       pageSize={QBANK_SUBJECTS_PAGE_SIZE}
       isInitialLoading={isInitialLoading}
@@ -155,6 +169,7 @@ export function QbankSubjectsTable({
       skeletonRows={<QbankSubjectsSkeletonRows />}
       header={
         <TableHeaderRow>
+          <TableHeadCell className="whitespace-nowrap text-center">Sort Order</TableHeadCell>
           <TableHeadCell>Icon</TableHeadCell>
           <TableHeadCell>Subject Name</TableHeadCell>
           <TableHeadCell>Status</TableHeadCell>

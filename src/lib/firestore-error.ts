@@ -16,7 +16,11 @@ export function getFirestoreErrorDetails(
 
   const firebaseError = error as { code?: string; message?: string }
   const rawMessage = firebaseError.message ?? ''
-  const indexUrl = rawMessage.match(INDEX_URL_PATTERN)?.[0]
+  const errorText =
+    rawMessage +
+    (error instanceof Error && error.stack ? ` ${error.stack}` : '') +
+    (typeof error === 'object' ? ` ${JSON.stringify(error)}` : '')
+  const indexUrl = errorText.match(INDEX_URL_PATTERN)?.[0]
 
   if (indexUrl) {
     return {
@@ -24,6 +28,10 @@ export function getFirestoreErrorDetails(
         'This query requires a Firestore composite index. Create the index in Firebase Console, then retry.',
       indexUrl,
     }
+  }
+
+  if (firebaseError.code === 'failed-precondition' && rawMessage.trim()) {
+    return { message: rawMessage }
   }
 
   if (rawMessage.trim()) {

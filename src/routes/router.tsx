@@ -9,8 +9,9 @@ import FacultiesPage from '@/pages/FacultiesPage'
 import GrandTestsPage from '@/pages/GrandTestsPage'
 import LoginPage from '@/pages/LoginPage'
 import PlansPage from '@/pages/PlansPage'
-import QBanksPage from '@/pages/QBanksPage'
 import QbankSubjectsPage from '@/pages/QbankSubjectsPage'
+import QbankChaptersPage from '@/pages/QbankChaptersPage'
+import QbankQuestionsPage from '@/pages/QbankQuestionsPage'
 import ClinicalVignettesPage from '@/pages/ClinicalVignettesPage'
 import McqOfTheDayPage from '@/pages/McqOfTheDayPage'
 import TenMinsConceptPage from '@/pages/TenMinsConceptPage'
@@ -73,12 +74,16 @@ export const router = createBrowserRouter([
         element: <GrandTestsPage />,
       },
       {
-        path: 'qbanks',
-        element: <QBanksPage />,
-      },
-      {
         path: 'qbank-subjects',
         element: <QbankSubjectsPage />,
+      },
+      {
+        path: 'qbank-chapters',
+        element: <QbankChaptersPage />,
+      },
+      {
+        path: 'qbank-questions',
+        element: <QbankQuestionsPage />,
       },
       {
         path: 'mcq-of-the-day',
