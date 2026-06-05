@@ -19,7 +19,15 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
   const { pathname } = useLocation()
   const panelId = useId()
   const visibleChildren = getSidebarVisibleNavChildren(group.children)
-  const isChildActive = group.children.some((child) => pathname === child.path)
+  const isGrandTestsGroup = group.label === 'Grand Tests'
+  const isGrandTestEditRoute = /^\/grand-tests\/[^/]+\/edit$/.test(pathname)
+  const isChildActive = group.children.some((child) => {
+    if (pathname === child.path) return true
+    if (isGrandTestsGroup && child.path === '/grand-tests/active' && isGrandTestEditRoute) {
+      return true
+    }
+    return false
+  })
   const [isExpanded, setIsExpanded] = useState(isChildActive)
 
   useEffect(() => {
@@ -28,6 +36,18 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
 
   function handleToggle() {
     setIsExpanded((prev) => !prev)
+  }
+
+  function isChildNavActive(childPath: string): boolean {
+    if (pathname === childPath) return true
+    if (
+      isGrandTestsGroup &&
+      childPath === '/grand-tests/active' &&
+      isGrandTestEditRoute
+    ) {
+      return true
+    }
+    return false
   }
 
   return (
@@ -59,7 +79,9 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
             <NavLink
               key={child.path}
               to={child.path}
-              className={childNavLinkClassName}
+              className={() =>
+                childNavLinkClassName({ isActive: isChildNavActive(child.path) })
+              }
             >
               <MaterialIcon name={child.icon} size={18} />
               {child.label}

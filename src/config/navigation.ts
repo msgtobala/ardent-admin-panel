@@ -109,6 +109,31 @@ export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
       },
     ],
   },
+  {
+    label: 'Grand Tests',
+    icon: 'assignment',
+    children: [
+      {
+        label: 'Active Tests',
+        path: '/grand-tests/active',
+        icon: 'play_circle',
+        breadcrumbs: { parent: 'Active Tests', current: 'Overview' },
+      },
+      {
+        label: 'Completed Tests',
+        path: '/grand-tests/completed',
+        icon: 'task_alt',
+        breadcrumbs: { parent: 'Completed Tests', current: 'Overview' },
+      },
+      {
+        label: 'Add New Test',
+        path: '/grand-tests/new',
+        icon: 'add',
+        breadcrumbs: { parent: 'Add New Test', current: 'Create' },
+        hiddenInSidebar: true,
+      },
+    ],
+  },
 ]
 
 export const NAV_ITEMS: NavItem[] = [
@@ -143,18 +168,14 @@ export const NAV_ITEMS: NavItem[] = [
     breadcrumbs: { parent: 'Students', current: 'Overview' },
   },
   {
-    label: 'Grand Tests',
-    path: '/grand-tests',
-    icon: 'assignment',
-    breadcrumbs: { parent: 'Grand Tests', current: 'Overview' },
-  },
-  {
     label: 'MCQ of the Day',
     path: '/mcq-of-the-day',
     icon: 'today',
     breadcrumbs: { parent: 'MCQ of the Day', current: 'Overview' },
   },
 ]
+
+const GRAND_TEST_EDIT_PATH_PATTERN = /^\/grand-tests\/[^/]+\/edit$/
 
 function findNavChildByPath(pathname: string): NavChildItem | undefined {
   for (const group of NAV_COLLAPSIBLE_GROUPS) {
@@ -164,12 +185,23 @@ function findNavChildByPath(pathname: string): NavChildItem | undefined {
   return undefined
 }
 
+function getDynamicRouteBreadcrumbs(pathname: string): NavBreadcrumbs | undefined {
+  if (GRAND_TEST_EDIT_PATH_PATTERN.test(pathname)) {
+    return { parent: 'Active Tests', current: 'Edit Test' }
+  }
+
+  return undefined
+}
+
 export function getBreadcrumbs(pathname: string): NavBreadcrumbs {
   const item = NAV_ITEMS.find((navItem) => navItem.path === pathname)
   if (item) return item.breadcrumbs
 
   const child = findNavChildByPath(pathname)
   if (child) return child.breadcrumbs
+
+  const dynamicBreadcrumbs = getDynamicRouteBreadcrumbs(pathname)
+  if (dynamicBreadcrumbs) return dynamicBreadcrumbs
 
   return { parent: 'Dashboard', current: 'Overview' }
 }
@@ -182,6 +214,10 @@ export function getNavItemByPath(
 
   const child = findNavChildByPath(pathname)
   if (child) return { path: child.path, label: child.label }
+
+  if (GRAND_TEST_EDIT_PATH_PATTERN.test(pathname)) {
+    return { path: '/grand-tests/active', label: 'Active Tests' }
+  }
 
   return undefined
 }

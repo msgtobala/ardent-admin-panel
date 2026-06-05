@@ -6,7 +6,10 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import BannersPage from '@/pages/BannersPage'
 import DashboardPage from '@/pages/DashboardPage'
 import FacultiesPage from '@/pages/FacultiesPage'
-import GrandTestsPage from '@/pages/GrandTestsPage'
+import ActiveTestsPage from '@/pages/ActiveTestsPage'
+import AddGrandTestPage from '@/pages/AddGrandTestPage'
+import CompletedTestsPage from '@/pages/CompletedTestsPage'
+import EditGrandTestPage from '@/pages/EditGrandTestPage'
 import LoginPage from '@/pages/LoginPage'
 import PlansPage from '@/pages/PlansPage'
 import QbankSubjectsPage from '@/pages/QbankSubjectsPage'
@@ -71,7 +74,23 @@ export const router = createBrowserRouter([
       },
       {
         path: 'grand-tests',
-        element: <GrandTestsPage />,
+        element: <Navigate to="/grand-tests/active" replace />,
+      },
+      {
+        path: 'grand-tests/active',
+        element: <ActiveTestsPage />,
+      },
+      {
+        path: 'grand-tests/new',
+        element: <AddGrandTestPage />,
+      },
+      {
+        path: 'grand-tests/:testId/edit',
+        element: <EditGrandTestPage />,
+      },
+      {
+        path: 'grand-tests/completed',
+        element: <CompletedTestsPage />,
       },
       {
         path: 'qbank-subjects',
