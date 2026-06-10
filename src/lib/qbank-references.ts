@@ -1,17 +1,26 @@
 import {
   collection,
   doc,
+  documentId,
+  getCountFromServer,
   getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
+  startAfter,
   where,
   type DocumentData,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore'
+import { formatCorrectAnswerSummary } from '@/lib/qbank-question-display'
+import type { QbankQuestionChapterRecord } from '@/types/qbank-question-list-item'
 import type {
   FullQbankQuestionDetails,
   QbankAnswerOption,
   QbankCorrectAnswer,
+  QbankQuestionEditPayload,
+  QbankQuestionReference,
 } from '@/types/qbank-question'
 import { QBANKS_COLLECTION } from './qbank-subjects'
 import { db } from './firebase'
@@ -314,6 +323,41 @@ function mapCorrectAnswer(data: DocumentData): QbankCorrectAnswer | null {
   return { option, description }
 }
 
+function mapCorrectAnswerImages(data: DocumentData): string[] {
+  const correctAnswer = data.correctAnswer
+  if (!correctAnswer || typeof correctAnswer !== 'object') return []
+
+  const correctRecord = correctAnswer as Record<string, unknown>
+  const rawImages = correctRecord.image
+  if (!Array.isArray(rawImages)) return []
+
+  return rawImages
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry) => entry.length > 0)
+}
+
+function mapReferenceStringField(
+  referenceRecord: Record<string, unknown>,
+  field: string,
+): string {
+  const value = referenceRecord[field]
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+export function mapQbankQuestionReference(data: DocumentData): QbankQuestionReference {
+  const reference = data.reference
+  if (!reference || typeof reference !== 'object') {
+    return { bookName: '', pageNo: '', chapter: '' }
+  }
+
+  const referenceRecord = reference as Record<string, unknown>
+  return {
+    bookName: mapReferenceStringField(referenceRecord, 'bookName'),
+    pageNo: mapReferenceStringField(referenceRecord, 'pageNo'),
+    chapter: mapReferenceStringField(referenceRecord, 'chapter'),
+  }
+}
+
 function mapReferenceSummary(data: DocumentData): string | null {
   const reference = data.reference
   if (!reference || typeof reference !== 'object') return null
@@ -349,6 +393,49 @@ function mapTags(data: DocumentData): string[] {
     .map((tag) => tag.trim())
 }
 
+function mapSortOrder(data: DocumentData): number | null {
+  if (typeof data.sortOrder === 'number' && Number.isFinite(data.sortOrder)) {
+    return data.sortOrder
+  }
+
+  if (typeof data.order === 'number' && Number.isFinite(data.order)) {
+    return data.order
+  }
+
+  return null
+}
+
+function mapIsActive(data: DocumentData): boolean {
+  return typeof data.isActive === 'boolean' ? data.isActive : true
+}
+
+function mapQuestionChapterRecord(
+  documentId: string,
+  data: DocumentData,
+): QbankQuestionChapterRecord {
+  const details = mapFullQuestionDetails(documentId, data)
+
+  return {
+    documentId: details.documentId,
+    questionRefId: details.questionRefId,
+    questionText: details.questionText,
+    questionImage: details.questionImage,
+    difficulty: details.difficulty,
+    tags: details.tags,
+    answerOptions: details.answerOptions,
+    answerOptionsCount: details.answerOptions.length,
+    correctAnswer: details.correctAnswer,
+    correctAnswerImages: mapCorrectAnswerImages(data),
+    correctAnswerSummary: formatCorrectAnswerSummary(
+      details.answerOptions,
+      details.correctAnswer,
+    ),
+    referenceSummary: details.referenceSummary,
+    isActive: mapIsActive(data),
+    sortOrder: mapSortOrder(data),
+  }
+}
+
 function mapFullQuestionDetails(
   documentId: string,
   data: DocumentData,
@@ -373,6 +460,39 @@ function mapFullQuestionDetails(
     answerOptions: mapAnswerOptions(data),
     correctAnswer: mapCorrectAnswer(data),
     referenceSummary: mapReferenceSummary(data),
+  }
+}
+
+function mapQuestionTextForEdit(questionText: string): string {
+  return questionText === '—' ? '' : questionText
+}
+
+export async function fetchQbankQuestionForEdit(
+  subjectRefId: string,
+  chapterRefId: string,
+  documentId: string,
+): Promise<QbankQuestionEditPayload | null> {
+  const snapshot = await getDoc(
+    doc(db, QBANKS_COLLECTION, subjectRefId, 'chapters', chapterRefId, 'questions', documentId),
+  )
+  if (!snapshot.exists()) return null
+
+  const data = snapshot.data()
+  const details = mapFullQuestionDetails(snapshot.id, data)
+
+  return {
+    documentId: details.documentId,
+    questionRefId: details.questionRefId,
+    questionText: mapQuestionTextForEdit(details.questionText),
+    questionImage: details.questionImage,
+    difficulty: details.difficulty,
+    tags: details.tags,
+    answerOptions: details.answerOptions,
+    correctAnswer: details.correctAnswer,
+    correctAnswerImages: mapCorrectAnswerImages(data),
+    reference: mapQbankQuestionReference(data),
+    isActive: mapIsActive(data),
+    sortOrder: mapSortOrder(data),
   }
 }
 
@@ -433,6 +553,88 @@ export async function fetchQbankChapterOptions(
       }
     })
     .sort((left, right) => left.chapterName.localeCompare(right.chapterName))
+}
+
+const DEFAULT_QBANK_QUESTIONS_PAGE_SIZE = 10
+
+function qbankQuestionsRef(subjectRefId: string, chapterRefId: string) {
+  return collection(
+    db,
+    QBANKS_COLLECTION,
+    subjectRefId,
+    'chapters',
+    chapterRefId,
+    'questions',
+  )
+}
+
+export interface FetchQbankQuestionsPageResult {
+  questions: QbankQuestionChapterRecord[]
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null
+  hasMore: boolean
+}
+
+export async function fetchQbankQuestionsPage(options: {
+  subjectId: string
+  chapterId: string
+  pageSize?: number
+  lastDoc?: QueryDocumentSnapshot<DocumentData> | null
+}): Promise<FetchQbankQuestionsPageResult> {
+  const pageSize = options.pageSize ?? DEFAULT_QBANK_QUESTIONS_PAGE_SIZE
+  const questionsRef = qbankQuestionsRef(options.subjectId, options.chapterId)
+
+  const listQuery = options.lastDoc
+    ? query(
+        questionsRef,
+        orderBy('sortOrder', 'asc'),
+        orderBy(documentId(), 'asc'),
+        startAfter(options.lastDoc),
+        limit(pageSize + 1),
+      )
+    : query(
+        questionsRef,
+        orderBy('sortOrder', 'asc'),
+        orderBy(documentId(), 'asc'),
+        limit(pageSize + 1),
+      )
+
+  const snapshot = await getDocs(listQuery)
+  const docs = snapshot.docs
+  const hasMore = docs.length > pageSize
+  const pageDocs = hasMore ? docs.slice(0, pageSize) : docs
+
+  return {
+    questions: pageDocs.map((questionDoc) =>
+      mapQuestionChapterRecord(questionDoc.id, questionDoc.data()),
+    ),
+    lastDoc: pageDocs.length > 0 ? pageDocs[pageDocs.length - 1] : null,
+    hasMore,
+  }
+}
+
+export async function getQbankQuestionsCount(
+  subjectId: string,
+  chapterId: string,
+): Promise<number> {
+  const snapshot = await getCountFromServer(query(qbankQuestionsRef(subjectId, chapterId)))
+  return snapshot.data().count
+}
+
+export async function fetchQbankQuestionsForChapter(
+  subjectRefId: string,
+  chapterRefId: string,
+): Promise<QbankQuestionChapterRecord[]> {
+  const questionsRef = qbankQuestionsRef(subjectRefId, chapterRefId)
+  const snapshot = await getDocs(questionsRef)
+
+  return snapshot.docs
+    .map((questionDoc) => mapQuestionChapterRecord(questionDoc.id, questionDoc.data()))
+    .sort((left, right) => {
+      const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER
+      const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder
+      return left.questionRefId.localeCompare(right.questionRefId)
+    })
 }
 
 export async function fetchQbankQuestionOptions(

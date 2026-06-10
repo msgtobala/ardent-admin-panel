@@ -275,7 +275,7 @@ export function EditPlanModal({
       sellingPrice: parseNumber(sellingPrice),
       durationMonths: savedDurationMonths,
       description: normalizePlanDescriptions(descriptions),
-      planModules,
+      planModules: normalizePlanModules(planModules),
       badge: badge.trim(),
       validUntilDate: savedValidUntilDate,
       isActive,

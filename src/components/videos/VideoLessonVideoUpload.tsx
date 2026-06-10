@@ -361,7 +361,7 @@ export function VideoLessonVideoUpload({
 
           <p className="text-body-md font-semibold text-on-surface">{statusMessage}</p>
           <p id="video-lesson-upload-hint" className="mt-1 text-caption text-on-surface-variant">
-            MP4, MOV, or WebM (max. 500MB)
+            MP4, MOV, or WebM
           </p>
 
           {displayPhase === 'uploading' ? (

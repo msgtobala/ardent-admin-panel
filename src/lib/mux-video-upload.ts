@@ -12,8 +12,6 @@ import type {
 } from '@/types/mux-video-upload'
 import { functions } from './functions'
 
-const MAX_VIDEO_FILE_SIZE_BYTES = 500 * 1024 * 1024
-
 const ALLOWED_VIDEO_MIME_TYPES = new Set([
   'video/mp4',
   'video/quicktime',
@@ -67,10 +65,6 @@ function isVideoExtension(fileName: string): boolean {
 export function validateVideoLessonFile(file: File): string | undefined {
   if (!ALLOWED_VIDEO_MIME_TYPES.has(file.type) && !isVideoExtension(file.name)) {
     return 'Please upload an MP4, MOV, or WebM video.'
-  }
-
-  if (file.size > MAX_VIDEO_FILE_SIZE_BYTES) {
-    return 'Video must be 500MB or smaller.'
   }
 
   if (file.size <= 0) {
