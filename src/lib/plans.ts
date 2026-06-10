@@ -12,6 +12,7 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
+import { normalizePlanModules } from '@/config/plan-modules'
 import type { FirestorePlanType } from '@/config/plan-sections'
 import type { Plan, PlanDocument } from '@/types/plan'
 import { db } from './firebase'
@@ -47,7 +48,9 @@ export function mapPlanDoc(snapshot: QueryDocumentSnapshot<DocumentData>): Plan 
     originalPrice: data.originalPrice ?? 0,
     sellingPrice: data.sellingPrice ?? 0,
     durationMonths: data.durationMonths ?? 0,
-    planModules: data.planModules ?? [],
+    planModules: normalizePlanModules(
+      Array.isArray(data.planModules) ? data.planModules.map(String) : [],
+    ),
     description: data.description ?? [],
     displayOrder: data.displayOrder ?? 0,
     badge: parseBadge(data.badge),
