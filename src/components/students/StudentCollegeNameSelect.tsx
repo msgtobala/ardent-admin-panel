@@ -1,5 +1,5 @@
 import { useCollegeOptions } from '@/hooks/useCollegeOptions'
-import { SelectField } from '@/components/ui/SelectField'
+import { SelectField, type SelectMenuPlacement } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 
 interface StudentCollegeNameSelectProps {
@@ -7,6 +7,7 @@ interface StudentCollegeNameSelectProps {
   stateCode: string
   value: string
   disabled?: boolean
+  menuPlacement?: SelectMenuPlacement
   onChange: (value: string) => void
 }
 
@@ -15,6 +16,7 @@ export function StudentCollegeNameSelect({
   stateCode,
   value,
   disabled = false,
+  menuPlacement = 'bottom',
   onChange,
 }: StudentCollegeNameSelectProps) {
   const { collegeOptions, isCollegesLoading, collegesLoadError } = useCollegeOptions({
@@ -47,6 +49,7 @@ export function StudentCollegeNameSelect({
           options={collegeOptions}
           placeholder="Select college"
           disabled={isDisabled}
+          menuPlacement={menuPlacement}
           onChange={onChange}
         />
         <p className="text-label-sm text-error-red" role="alert">
@@ -70,6 +73,7 @@ export function StudentCollegeNameSelect({
             : 'No colleges found for this state'
       }
       disabled={isDisabled || collegeOptions.length === 0}
+      menuPlacement={menuPlacement}
       onChange={onChange}
     />
   )

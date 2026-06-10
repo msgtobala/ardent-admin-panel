@@ -447,6 +447,7 @@ export function EditStudentModal({
               options={planSelectOptions}
               placeholder="Select a plan"
               disabled={isSubmitting || plans.length === 0}
+              menuPlacement="top"
               onChange={setSelectedPlanId}
             />
 

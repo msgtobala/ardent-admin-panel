@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getFirestoreErrorDetails } from '@/lib/firestore-error'
-import { generateVideoLessonThumbnailFromMux } from '@/lib/video-lesson-thumbnail'
+import {
+  generateMissingVideoLessonThumbnails,
+  generateVideoLessonThumbnail,
+} from '@/lib/generate-video-lesson-thumbnail'
 import {
   VIDEO_LESSONS_PAGE_SIZE,
   fetchVideoLessons,
 } from '@/lib/video-lessons'
 import { fetchVideoSubjects } from '@/lib/video-subjects'
+import type { ThumbnailGenerationConfig } from '@/types/thumbnail-generation'
 import type { VideoLesson } from '@/types/video-lesson'
 import type { VideoSubject } from '@/types/video-subject'
 
@@ -140,15 +144,16 @@ export function useGenerateThumbnailPage(refreshKey = 0) {
   )
 
   const handleGenerateThumbnail = useCallback(
-    async (lesson: VideoLesson) => {
+    async (lesson: VideoLesson, config: ThumbnailGenerationConfig) => {
       if (!selectedSubjectId || generatingLessonId || bulkGenerating) return
 
       setGeneratingLessonId(lesson.id)
 
       try {
-        const thumbnailImage = await generateVideoLessonThumbnailFromMux(
+        const thumbnailImage = await generateVideoLessonThumbnail(
           selectedSubjectId,
-          lesson,
+          lesson.id,
+          config,
         )
         updateLessonThumbnailLocally(lesson.id, thumbnailImage)
       } finally {
@@ -163,34 +168,46 @@ export function useGenerateThumbnailPage(refreshKey = 0) {
     ],
   )
 
-  const handleGenerateAllMissing = useCallback(async () => {
-    if (!selectedSubjectId || generatingLessonId || bulkGenerating) return
+  const handleGenerateAllMissing = useCallback(
+    async (config: ThumbnailGenerationConfig) => {
+      if (!selectedSubjectId || generatingLessonId || bulkGenerating) return
 
-    const targets = allLessons.filter(
-      (lesson) => lesson.muxPlaybackId.trim() && !lesson.thumbnailImage.trim(),
-    )
-    if (targets.length === 0) return
+      const targets = allLessons.filter(
+        (lesson) => lesson.muxPlaybackId.trim() && !lesson.thumbnailImage.trim(),
+      )
+      if (targets.length === 0) return
 
-    setBulkGenerating(true)
+      setBulkGenerating(true)
 
-    try {
-      for (const lesson of targets) {
-        const thumbnailImage = await generateVideoLessonThumbnailFromMux(
+      try {
+        const bulkResult = await generateMissingVideoLessonThumbnails(
           selectedSubjectId,
-          lesson,
+          config,
         )
-        updateLessonThumbnailLocally(lesson.id, thumbnailImage)
+
+        for (const item of bulkResult.results) {
+          if (item.status === 'success' && item.thumbnailImage) {
+            updateLessonThumbnailLocally(item.lessonId, item.thumbnailImage)
+          }
+        }
+
+        if (bulkResult.errorCount > 0) {
+          throw new Error(
+            `Generated ${bulkResult.successCount} thumbnail${bulkResult.successCount === 1 ? '' : 's'}, but ${bulkResult.errorCount} failed.`,
+          )
+        }
+      } finally {
+        setBulkGenerating(false)
       }
-    } finally {
-      setBulkGenerating(false)
-    }
-  }, [
-    allLessons,
-    bulkGenerating,
-    generatingLessonId,
-    selectedSubjectId,
-    updateLessonThumbnailLocally,
-  ])
+    },
+    [
+      allLessons,
+      bulkGenerating,
+      generatingLessonId,
+      selectedSubjectId,
+      updateLessonThumbnailLocally,
+    ],
+  )
 
   const isLessonsInitialLoading =
     Boolean(selectedSubjectId) &&

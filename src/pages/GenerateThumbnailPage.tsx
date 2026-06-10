@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react'
+import {
+  GenerateThumbnailConfigModal,
+  type GenerateThumbnailModalAction,
+} from '@/components/videos/generate-thumbnail/GenerateThumbnailConfigModal'
 import { GenerateThumbnailLessonsTable } from '@/components/videos/generate-thumbnail/GenerateThumbnailLessonsTable'
 import { GenerateThumbnailPageHeader } from '@/components/videos/generate-thumbnail/GenerateThumbnailPageHeader'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { useGenerateThumbnailPage } from '@/hooks/useGenerateThumbnailPage'
+import type { ThumbnailGenerationConfig } from '@/types/thumbnail-generation'
 import type { VideoLesson } from '@/types/video-lesson'
 import { SelectField, type SelectOption } from '@/components/ui/SelectField'
 import { TableErrorState } from '@/components/ui/table'
@@ -10,6 +15,10 @@ import { TableErrorState } from '@/components/ui/table'
 export default function GenerateThumbnailPage() {
   const { showSnackbar } = useSnackbar()
   const [refreshKey, setRefreshKey] = useState(0)
+  const [pendingAction, setPendingAction] = useState<{
+    action: GenerateThumbnailModalAction
+    lesson?: VideoLesson
+  } | null>(null)
 
   const {
     subjects,
@@ -49,36 +58,61 @@ export default function GenerateThumbnailPage() {
     [subjects],
   )
 
-  async function handleGenerate(lesson: VideoLesson) {
+  function openSingleGenerateModal(lesson: VideoLesson) {
+    if (isGenerating) return
+
+    setPendingAction({
+      action: {
+        type: 'single',
+        lessonLabel: lesson.lessonName.trim() || lesson.id,
+      },
+      lesson,
+    })
+  }
+
+  function openBulkGenerateModal() {
+    if (missingThumbnailCount === 0) {
+      showSnackbar('All lessons with video already have thumbnails.')
+      return
+    }
+    if (isGenerating) return
+
+    setPendingAction({
+      action: {
+        type: 'bulk',
+        lessonCount: missingThumbnailCount,
+      },
+    })
+  }
+
+  function closeConfigModal() {
+    if (isGenerating) return
+    setPendingAction(null)
+  }
+
+  async function handleConfirmGenerate(config: ThumbnailGenerationConfig) {
+    if (!pendingAction) return
+
     try {
-      await handleGenerateThumbnail(lesson)
-      showSnackbar(`Thumbnail generated for ${lesson.lessonName.trim() || lesson.id}`)
+      if (pendingAction.action.type === 'single' && pendingAction.lesson) {
+        await handleGenerateThumbnail(pendingAction.lesson, config)
+        showSnackbar(
+          `Thumbnail generated for ${pendingAction.lesson.lessonName.trim() || pendingAction.lesson.id}`,
+        )
+      } else if (pendingAction.action.type === 'bulk') {
+        await handleGenerateAllMissing(config)
+        showSnackbar(
+          `Generated ${missingThumbnailCount} thumbnail${missingThumbnailCount === 1 ? '' : 's'}`,
+        )
+        setRefreshKey((prev) => prev + 1)
+      }
+
+      setPendingAction(null)
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Failed to generate thumbnail. Please try again.'
-      showSnackbar(message)
-    }
-  }
-
-  async function handleGenerateAll() {
-    if (missingThumbnailCount === 0) {
-      showSnackbar('All lessons with video already have thumbnails.')
-      return
-    }
-
-    try {
-      await handleGenerateAllMissing()
-      showSnackbar(
-        `Generated ${missingThumbnailCount} thumbnail${missingThumbnailCount === 1 ? '' : 's'}`,
-      )
-      setRefreshKey((prev) => prev + 1)
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate thumbnails. Please try again.'
       showSnackbar(message)
     }
   }
@@ -89,7 +123,8 @@ export default function GenerateThumbnailPage() {
         missingThumbnailCount={missingThumbnailCount}
         hasSubjectSelected={Boolean(selectedSubjectId)}
         isGenerating={isGenerating}
-        onGenerateAllMissing={handleGenerateAll}
+        disabled={isLoadingSubjects}
+        onGenerateThumbnails={openBulkGenerateModal}
       />
 
       <section className="rounded-xl border border-border-subtle bg-surface-white px-gutter py-gutter shadow-tier-1">
@@ -136,8 +171,17 @@ export default function GenerateThumbnailPage() {
         onNext={handleNext}
         onPrevious={handlePrevious}
         onRetry={handleRetryLessons}
-        onGenerate={handleGenerate}
+        onGenerate={openSingleGenerateModal}
       />
+
+      {pendingAction ? (
+        <GenerateThumbnailConfigModal
+          action={pendingAction.action}
+          isSubmitting={isGenerating}
+          onClose={closeConfigModal}
+          onConfirm={handleConfirmGenerate}
+        />
+      ) : null}
     </div>
   )
 }

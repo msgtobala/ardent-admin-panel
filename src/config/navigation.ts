@@ -77,11 +77,10 @@ export const NAV_COLLAPSIBLE_GROUPS: NavCollapsibleGroup[] = [
         breadcrumbs: { parent: 'Videos', current: 'Overview' },
       },
       {
-        label: 'Generate Thumbnail',
+        label: 'Generate Thumbnails',
         path: '/generate-thumbnail',
         icon: 'auto_awesome',
-        breadcrumbs: { parent: 'Generate Thumbnail', current: 'Overview' },
-        hiddenInSidebar: true,
+        breadcrumbs: { parent: 'Generate Thumbnails', current: 'Overview' },
       },
     ],
   },
@@ -172,6 +171,12 @@ export const NAV_ITEMS: NavItem[] = [
     path: '/mcq-of-the-day',
     icon: 'today',
     breadcrumbs: { parent: 'MCQ of the Day', current: 'Overview' },
+  },
+  {
+    label: 'Suggested Videos',
+    path: '/suggested-videos',
+    icon: 'thumb_up',
+    breadcrumbs: { parent: 'Suggested Videos', current: 'Overview' },
   },
 ]
 
