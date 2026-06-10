@@ -331,6 +331,21 @@ async function syncSubjectTotalLessons(subjectId: string): Promise<void> {
   })
 }
 
+export async function getTotalVideoLessonsCount(): Promise<number> {
+  const subjectsSnapshot = await getDocs(collection(db, VIDEOS_COLLECTION))
+
+  if (subjectsSnapshot.empty) return 0
+
+  const lessonCounts = await Promise.all(
+    subjectsSnapshot.docs.map(async (subjectDoc) => {
+      const countSnapshot = await getCountFromServer(lessonsRef(subjectDoc.id))
+      return countSnapshot.data().count
+    }),
+  )
+
+  return lessonCounts.reduce((total, count) => total + count, 0)
+}
+
 export async function deleteVideoLesson(
   subjectId: string,
   lessonId: string,
