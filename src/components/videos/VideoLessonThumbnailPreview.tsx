@@ -1,14 +1,17 @@
+import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface VideoLessonThumbnailPreviewProps {
   thumbnailUrl: string
   lessonName: string
+  headerAction?: ReactNode
 }
 
 export function VideoLessonThumbnailPreview({
   thumbnailUrl,
   lessonName,
+  headerAction,
 }: VideoLessonThumbnailPreviewProps) {
   const [hasImageError, setHasImageError] = useState(false)
   const trimmedUrl = thumbnailUrl.trim()
@@ -24,13 +27,19 @@ export function VideoLessonThumbnailPreview({
       className="flex flex-col gap-3"
       aria-labelledby="video-lesson-thumbnail-heading"
     >
-      <div className="flex items-center gap-2">
-        <div className="flex size-8 items-center justify-center rounded-full bg-primary-fixed">
-          <MaterialIcon name="image" size={18} className="text-primary-action" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-full bg-primary-fixed">
+            <MaterialIcon name="image" size={18} className="text-primary-action" />
+          </div>
+          <h3
+            id="video-lesson-thumbnail-heading"
+            className="text-label-sm font-semibold text-on-surface"
+          >
+            Thumbnail
+          </h3>
         </div>
-        <h3 id="video-lesson-thumbnail-heading" className="text-label-sm font-semibold text-on-surface">
-          Thumbnail
-        </h3>
+        {headerAction}
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-container-low shadow-tier-1">

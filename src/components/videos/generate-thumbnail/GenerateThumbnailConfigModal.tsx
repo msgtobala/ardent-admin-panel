@@ -82,7 +82,7 @@ export function GenerateThumbnailConfigModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-[2px]"
       role="presentation"
     >
       <button
