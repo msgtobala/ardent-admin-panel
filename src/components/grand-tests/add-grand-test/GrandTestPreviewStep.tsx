@@ -3,6 +3,7 @@ import { formatDisplayDate } from '@/lib/format-display-date'
 import type { SelectedGrandTestQuestion } from '@/types/grand-test'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { GrandTestStatusBadge } from '@/components/grand-tests/GrandTestStatusBadge'
+import { GrandTestCustomQuestionDetailInline } from './GrandTestCustomQuestionDetailInline'
 import { GrandTestQuestionDetailPanel } from './GrandTestQuestionDetailPanel'
 
 interface GrandTestPreviewStepProps {
@@ -101,9 +102,16 @@ export function GrandTestPreviewStep({
                   key={question.documentId}
                   className="rounded-lg border border-border-subtle bg-surface-white px-3 py-3"
                 >
-                  <p className="text-label-sm font-semibold text-primary">
-                    {index + 1}. {question.questionRefId}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-label-sm font-semibold text-primary">
+                      {index + 1}. {question.questionRefId}
+                    </p>
+                    {question.isCustom ? (
+                      <span className="inline-flex rounded-full bg-info-bg px-2 py-0.5 text-caption font-medium text-on-secondary-fixed">
+                        Custom
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-1 whitespace-pre-wrap text-body-md text-on-surface">
                     {question.questionText}
                   </p>
@@ -124,12 +132,18 @@ export function GrandTestPreviewStep({
                   </button>
 
                   {isExpanded ? (
-                    <div className="mt-3 border-t border-border-subtle pt-3">
-                      <GrandTestQuestionDetailPanel
-                        subjectRefId={question.subjectRefId}
-                        chapterRefId={question.chapterRefId}
-                        questionRefId={question.questionRefId}
-                      />
+                    <div className="mt-3">
+                      {question.isCustom && question.customDraft ? (
+                        <GrandTestCustomQuestionDetailInline draft={question.customDraft} />
+                      ) : (
+                        <div className="border-t border-border-subtle pt-3">
+                          <GrandTestQuestionDetailPanel
+                            subjectRefId={question.subjectRefId}
+                            chapterRefId={question.chapterRefId}
+                            questionRefId={question.questionRefId}
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : null}
                 </li>

@@ -5,12 +5,14 @@ import {
   type QbankQuestionOption,
 } from '@/lib/qbank-references'
 import { fetchQbankSubjects } from '@/lib/qbank-subjects'
+import type { QbankSubject } from '@/types/qbank-subject'
 import type { SelectedGrandTestQuestion } from '@/types/grand-test'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SelectField, type SelectOption } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 import { GrandTestChapterQuestionList } from './GrandTestChapterQuestionList'
+import { GrandTestCustomQuestionModal } from './GrandTestCustomQuestionModal'
 import { SelectedQuestionsList } from './SelectedQuestionsList'
 
 interface GrandTestQuestionPickerStepProps {
@@ -42,7 +44,11 @@ export function GrandTestQuestionPickerStep({
   const [chapterRefId, setChapterRefId] = useState('')
   const [pendingQuestionIds, setPendingQuestionIds] = useState<string[]>([])
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null)
+  const [subjects, setSubjects] = useState<QbankSubject[]>([])
   const [subjectOptions, setSubjectOptions] = useState<SelectOption[]>([])
+  const [isCustomQuestionModalOpen, setIsCustomQuestionModalOpen] = useState(false)
+  const [editingCustomQuestion, setEditingCustomQuestion] =
+    useState<SelectedGrandTestQuestion | null>(null)
   const [chapterOptions, setChapterOptions] = useState<SelectOption[]>([])
   const [chapterQuestions, setChapterQuestions] = useState<QbankQuestionOption[]>([])
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false)
@@ -65,11 +71,12 @@ export function GrandTestQuestionPickerStep({
       setLoadError(undefined)
 
       try {
-        const subjects = await fetchQbankSubjects()
+        const loadedSubjects = await fetchQbankSubjects()
         if (isCancelled) return
 
+        setSubjects(loadedSubjects)
         setSubjectOptions(
-          subjects.map((subject) => ({
+          loadedSubjects.map((subject) => ({
             value: subject.id,
             label: subject.subjectName || subject.id,
           })),
@@ -171,10 +178,46 @@ export function GrandTestQuestionPickerStep({
     [isFormDisabled, isLoadingChapters, subjectRefId],
   )
 
-  const selectedSubjectLabel =
-    subjectOptions.find((option) => option.value === subjectRefId)?.label ?? ''
+  const selectedSubject =
+    subjects.find((subject) => subject.id === subjectRefId) ?? null
+  const selectedSubjectLabel = selectedSubject?.subjectName || subjectRefId
   const selectedChapterLabel =
     chapterOptions.find((option) => option.value === chapterRefId)?.label ?? ''
+
+  function handleOpenCustomQuestionModal() {
+    if (!subjectRefId || !chapterRefId) return
+    setEditingCustomQuestion(null)
+    setIsCustomQuestionModalOpen(true)
+    onClearFormError?.()
+  }
+
+  function handleCloseCustomQuestionModal() {
+    setIsCustomQuestionModalOpen(false)
+    setEditingCustomQuestion(null)
+  }
+
+  function handleAddCustomQuestion(question: SelectedGrandTestQuestion) {
+    onSelectedQuestionsChange([...selectedQuestions, question])
+    onClearFormError?.()
+  }
+
+  function handleEditCustomQuestion(documentId: string) {
+    const question = selectedQuestions.find((item) => item.documentId === documentId)
+    if (!question?.isCustom || !question.customDraft) return
+
+    setEditingCustomQuestion(question)
+    setIsCustomQuestionModalOpen(true)
+    onClearFormError?.()
+  }
+
+  function handleSaveCustomQuestion(question: SelectedGrandTestQuestion) {
+    onSelectedQuestionsChange(
+      selectedQuestions.map((item) =>
+        item.documentId === question.documentId ? question : item,
+      ),
+    )
+    onClearFormError?.()
+  }
 
   function handleToggleSelect(documentId: string) {
     if (alreadyAddedIds.has(documentId)) return
@@ -212,6 +255,7 @@ export function GrandTestQuestionPickerStep({
         chapterRefId,
         subjectName: selectedSubjectLabel || subjectRefId,
         chapterName: selectedChapterLabel || chapterRefId,
+        source: 'qbanks',
       })
       existingIds.add(documentId)
     }
@@ -323,16 +367,28 @@ export function GrandTestQuestionPickerStep({
             )}
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || pendingQuestionIds.length === 0}
-            onClick={handleAddSelectedQuestions}
-            className="self-start gap-2"
-          >
-            <MaterialIcon name="playlist_add" size={16} />
-            Add {pendingQuestionIds.length > 0 ? `${pendingQuestionIds.length} ` : ''}selected
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled || pendingQuestionIds.length === 0}
+              onClick={handleAddSelectedQuestions}
+              className="gap-2"
+            >
+              <MaterialIcon name="playlist_add" size={16} />
+              Add {pendingQuestionIds.length > 0 ? `${pendingQuestionIds.length} ` : ''}selected
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled || !subjectRefId || !chapterRefId}
+              onClick={handleOpenCustomQuestionModal}
+              className="gap-2"
+            >
+              <MaterialIcon name="edit_note" size={16} />
+              Add custom question
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -349,6 +405,7 @@ export function GrandTestQuestionPickerStep({
             disabled={disabled}
             listMaxHeightClass={listMaxHeightClass}
             onRemove={handleRemoveQuestion}
+            onEditCustomQuestion={handleEditCustomQuestion}
           />
           {selectedQuestionsError ? (
             <p className="text-label-sm text-error-red" role="alert">
@@ -362,6 +419,23 @@ export function GrandTestQuestionPickerStep({
         <p className="text-label-sm text-error-red" role="alert">
           {loadError ?? formError}
         </p>
+      ) : null}
+
+      {isCustomQuestionModalOpen &&
+      (editingCustomQuestion || (subjectRefId && chapterRefId)) ? (
+        <GrandTestCustomQuestionModal
+          isOpen={isCustomQuestionModalOpen}
+          subjectRefId={editingCustomQuestion?.subjectRefId ?? subjectRefId}
+          chapterRefId={editingCustomQuestion?.chapterRefId ?? chapterRefId}
+          subjectName={editingCustomQuestion?.subjectName ?? selectedSubjectLabel}
+          chapterName={editingCustomQuestion?.chapterName ?? selectedChapterLabel}
+          mcqMid={selectedSubject?.mcqMid ?? null}
+          disabled={disabled}
+          editingQuestion={editingCustomQuestion}
+          onClose={handleCloseCustomQuestionModal}
+          onAdd={handleAddCustomQuestion}
+          onSave={handleSaveCustomQuestion}
+        />
       ) : null}
     </div>
   )

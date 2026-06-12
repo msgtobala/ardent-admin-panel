@@ -43,6 +43,7 @@ const SUBJECT_CODES: Record<string, string> = {
 }
 
 const MCQ_QUESTION_ID_PATTERN = /^MCQ-([A-Z]+)-([A-Z0-9]+)-(\d{3})$/
+export const CUSTOM_QBANK_QUESTION_ID_SUFFIX = '-CUS'
 
 export interface ParsedMcqQuestionId {
   subjectCode: string
@@ -90,6 +91,17 @@ export function formatQuestionId(
 ): string {
   const paddedNum = String(questionNumber).padStart(3, '0')
   return `MCQ-${subjectCode}-${chapterCode}-${paddedNum}`
+}
+
+export function formatCustomQuestionId(questionId: string): string {
+  const trimmed = questionId.trim()
+  if (!trimmed) return trimmed
+  if (isCustomQbankQuestionId(trimmed)) return trimmed
+  return `${trimmed}${CUSTOM_QBANK_QUESTION_ID_SUFFIX}`
+}
+
+export function isCustomQbankQuestionId(questionId: string): boolean {
+  return questionId.trim().endsWith(CUSTOM_QBANK_QUESTION_ID_SUFFIX)
 }
 
 export function parseMcqQuestionId(id: string): ParsedMcqQuestionId | null {
@@ -144,14 +156,19 @@ async function fetchHighestMcqQuestionId(
     limit(1),
   )
 
-  const snapshot = await getDocs(highestIdQuery)
+  const snapshot = await getDocs(query(highestIdQuery, limit(25)))
   if (snapshot.empty) return null
 
-  const highestDoc = snapshot.docs[0]
-  const parsed = parseMcqQuestionId(highestDoc.id)
-  if (!parsed) return null
+  for (const highestDoc of snapshot.docs) {
+    if (isCustomQbankQuestionId(highestDoc.id)) continue
 
-  return { documentId: highestDoc.id, parsed }
+    const parsed = parseMcqQuestionId(highestDoc.id)
+    if (!parsed) continue
+
+    return { documentId: highestDoc.id, parsed }
+  }
+
+  return null
 }
 
 async function fetchNextSortOrder(subjectId: string, chapterId: string): Promise<number> {
@@ -166,6 +183,21 @@ async function fetchNextSortOrder(subjectId: string, chapterId: string): Promise
 
   const maxSortOrder = resolveMaxSortOrder(snapshot.docs[0].data())
   return (maxSortOrder ?? -1) + 1
+}
+
+export async function resolveNextCustomQbankQuestionIdentity(options: {
+  subjectId: string
+  chapterId: string
+  mcqMid: number | null
+  subjectName: string
+  chapterName: string
+}): Promise<QbankQuestionIdentity> {
+  const identity = await resolveNextQbankQuestionIdentity(options)
+
+  return {
+    ...identity,
+    questionId: formatCustomQuestionId(identity.questionId),
+  }
 }
 
 export async function resolveNextQbankQuestionIdentity(options: {

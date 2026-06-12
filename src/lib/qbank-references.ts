@@ -22,6 +22,7 @@ import type {
   QbankQuestionEditPayload,
   QbankQuestionReference,
 } from '@/types/qbank-question'
+import { isCustomQbankQuestionId } from './qbank-question-id'
 import { QBANKS_COLLECTION } from './qbank-subjects'
 import { db } from './firebase'
 
@@ -601,7 +602,9 @@ export async function fetchQbankQuestionsPage(options: {
   const snapshot = await getDocs(listQuery)
   const docs = snapshot.docs
   const hasMore = docs.length > pageSize
-  const pageDocs = hasMore ? docs.slice(0, pageSize) : docs
+  const pageDocs = (hasMore ? docs.slice(0, pageSize) : docs).filter(
+    (questionDoc) => !isCustomQbankQuestionId(questionDoc.id),
+  )
 
   return {
     questions: pageDocs.map((questionDoc) =>
@@ -628,6 +631,7 @@ export async function fetchQbankQuestionsForChapter(
   const snapshot = await getDocs(questionsRef)
 
   return snapshot.docs
+    .filter((questionDoc) => !isCustomQbankQuestionId(questionDoc.id))
     .map((questionDoc) => mapQuestionChapterRecord(questionDoc.id, questionDoc.data()))
     .sort((left, right) => {
       const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER
@@ -652,6 +656,7 @@ export async function fetchQbankQuestionOptions(
   const snapshot = await getDocs(questionsRef)
 
   return snapshot.docs
+    .filter((questionDoc) => !isCustomQbankQuestionId(questionDoc.id))
     .map((questionDoc) => {
       const data = questionDoc.data()
       const questionRefId =

@@ -1,3 +1,7 @@
+import type { QbankAnswerOption, QbankQuestionReference } from '@/types/qbank-question'
+
+export type GrandTestQuestionSource = 'qbanks' | 'custom'
+
 export type GrandTestLifecycleStatus = 'upcoming' | 'live' | 'expired'
 
 export interface GrandTestDocument {
@@ -40,6 +44,29 @@ export interface GrandTestMonthGroup {
   tests: GrandTest[]
 }
 
+export interface GrandTestCustomQuestionPendingImage {
+  id: string
+  file: File
+  previewUrl: string
+}
+
+export interface GrandTestCustomQuestionDraft {
+  question: string
+  answerOptions: QbankAnswerOption[]
+  correctOptionKey: string
+  correctDescription: string
+  reference: QbankQuestionReference
+  questionImage: string | null
+  correctAnswerImages: string[]
+  pendingQuestionImageFile?: File | null
+  pendingQuestionImagePreviewUrl?: string | null
+  pendingCorrectAnswerImages?: GrandTestCustomQuestionPendingImage[]
+  /** Persisted image URLs to delete from storage after a custom question edit is saved. */
+  removedStorageImageUrls?: string[]
+  /** Original 0-based slot indices of removed correct-answer images (edit flow). */
+  removedCorrectAnswerSlotIndices?: number[]
+}
+
 export interface SelectedGrandTestQuestion {
   documentId: string
   questionRefId: string
@@ -49,6 +76,9 @@ export interface SelectedGrandTestQuestion {
   chapterRefId: string
   subjectName: string
   chapterName: string
+  source?: GrandTestQuestionSource
+  isCustom?: boolean
+  customDraft?: GrandTestCustomQuestionDraft
 }
 
 export interface GrandTestQuestionWrite {
@@ -63,6 +93,8 @@ export interface GrandTestQuestionWrite {
     description: string
     image: string[]
   }
+  source: GrandTestQuestionSource
+  references?: Array<Record<string, string>>
 }
 
 export interface CreateGrandTestInput {

@@ -9,6 +9,13 @@ import {
   writeBatch,
   type DocumentData,
 } from 'firebase/firestore'
+import { isCustomQbankQuestionId } from '@/lib/qbank-question-id'
+import {
+  collectGrandTestCustomQuestionImageUrls,
+  isGrandTestCustomQuestionDoc,
+  mapGrandTestQuestionDocToCustomDraft,
+} from '@/lib/grand-test-custom-question'
+import { deleteGrandTestCustomQuestionImages } from '@/lib/grand-test-custom-question-image-storage'
 import {
   fetchQbankChapterName,
   fetchQbankSubjectName,
@@ -18,6 +25,7 @@ import { toDatetimeLocalValue } from '@/lib/format-date'
 import type {
   CreateGrandTestInput,
   GrandTestEditFormData,
+  GrandTestQuestionSource,
   SelectedGrandTestQuestion,
 } from '@/types/grand-test'
 import { GRAND_TESTS_COLLECTION, mapGrandTestDoc } from './grand-tests'
@@ -28,6 +36,12 @@ interface GrandTestQuestionDocument extends DocumentData {
   id?: string
   order?: number
   question?: string
+  options?: string[]
+  correctOption?: {
+    option?: number
+    description?: string
+  }
+  source?: GrandTestQuestionSource
   subjectRefId?: string
   chapterRefId?: string
   questionRefId?: string
@@ -66,6 +80,17 @@ function buildQuestionLabel(questionRefId: string, questionText: string): string
   return `${questionRefId} — ${truncated}`
 }
 
+function resolveGrandTestQuestionSource(
+  documentId: string,
+  data: GrandTestQuestionDocument,
+): GrandTestQuestionSource {
+  if (data.source === 'custom' || data.source === 'qbanks') {
+    return data.source
+  }
+
+  return isCustomQbankQuestionId(documentId) ? 'custom' : 'qbanks'
+}
+
 async function mapGrandTestQuestionToSelected(
   documentId: string,
   data: GrandTestQuestionDocument,
@@ -92,6 +117,15 @@ async function mapGrandTestQuestionToSelected(
     fetchQbankChapterName(location.subjectRefId, location.chapterRefId),
   ])
 
+  const source = resolveGrandTestQuestionSource(documentId, data)
+  const isCustom = source === 'custom'
+
+  const customDraft = isCustom ? mapGrandTestQuestionDocToCustomDraft(data) : null
+
+  if (isCustom && !customDraft) {
+    return null
+  }
+
   return {
     documentId: location.documentId,
     questionRefId: location.questionRefId,
@@ -101,6 +135,13 @@ async function mapGrandTestQuestionToSelected(
     chapterRefId: location.chapterRefId,
     subjectName: subjectName === '—' ? location.subjectRefId : subjectName,
     chapterName: chapterName === '—' ? location.chapterRefId : chapterName,
+    source,
+    ...(customDraft
+      ? {
+          isCustom: true as const,
+          customDraft,
+        }
+      : {}),
   }
 }
 
@@ -120,7 +161,10 @@ export async function fetchGrandTestForEdit(
   )
 
   const unresolvedDocumentIds = questionsSnapshot.docs
-    .filter((questionDoc) => !readStoredQuestionLocation(questionDoc.id, questionDoc.data()))
+    .filter((questionDoc) => {
+      if (isCustomQbankQuestionId(questionDoc.id)) return false
+      return !readStoredQuestionLocation(questionDoc.id, questionDoc.data())
+    })
     .map((questionDoc) => questionDoc.id)
 
   const resolvedLocations = await resolveQbankQuestionLocationsByDocumentIds(
@@ -184,12 +228,25 @@ export async function updateGrandTest(
     isActive: input.isActive,
   })
 
+  const removedCustomQuestionImageUrls: string[] = []
+
   for (const existingQuestion of existingQuestionsSnapshot.docs) {
-    if (!nextQuestionIds.has(existingQuestion.id)) {
-      batch.delete(existingQuestion.ref)
+    if (nextQuestionIds.has(existingQuestion.id)) continue
+
+    const data = existingQuestion.data()
+    if (isGrandTestCustomQuestionDoc(existingQuestion.id, data)) {
+      removedCustomQuestionImageUrls.push(
+        ...collectGrandTestCustomQuestionImageUrls(data),
+      )
     }
+
+    batch.delete(existingQuestion.ref)
   }
 
   await writeGrandTestQuestionsToBatch(batch, testRef, input.selectedQuestions)
   await batch.commit()
+
+  if (removedCustomQuestionImageUrls.length > 0) {
+    await deleteGrandTestCustomQuestionImages(removedCustomQuestionImageUrls)
+  }
 }
