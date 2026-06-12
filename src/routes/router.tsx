@@ -23,6 +23,7 @@ import VideoChaptersPage from '@/pages/VideoChaptersPage'
 import EditModulesPage from '@/pages/EditModulesPage'
 import GenerateThumbnailPage from '@/pages/GenerateThumbnailPage'
 import VideosPage from '@/pages/VideosPage'
+import SuggestedVideosPage from '@/pages/SuggestedVideosPage'
 import StudentsPage from '@/pages/StudentsPage'
 
 export const router = createBrowserRouter([
@@ -131,6 +132,10 @@ export const router = createBrowserRouter([
       {
         path: 'videos',
         element: <VideosPage />,
+      },
+      {
+        path: 'suggested-videos',
+        element: <SuggestedVideosPage />,
       },
       {
         path: 'generate-thumbnail',

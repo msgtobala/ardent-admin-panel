@@ -10,7 +10,10 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { SelectOption } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 import { VideoLessonModuleField } from '@/components/videos/VideoLessonModuleField'
+import { GenerateThumbnailConfigModal } from '@/components/videos/generate-thumbnail/GenerateThumbnailConfigModal'
+import { generateVideoLessonThumbnail } from '@/lib/generate-video-lesson-thumbnail'
 import { lessonHasMuxVideo } from '@/lib/video-lesson-thumbnail'
+import type { ThumbnailGenerationConfig } from '@/types/thumbnail-generation'
 import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
 import { VideoLessonPlayer } from '@/components/videos/VideoLessonPlayer'
 import { VideoLessonThumbnailPreview } from '@/components/videos/VideoLessonThumbnailPreview'
@@ -65,10 +68,13 @@ export function EditVideoLessonModal({
   const [moduleNameError, setModuleNameError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [thumbnailImage, setThumbnailImage] = useState('')
+  const [isThumbnailConfigOpen, setIsThumbnailConfigOpen] = useState(false)
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false)
 
   const uploadSubjectId = lesson?.subjectId ?? subjectId ?? ''
   const uploadLessonId = lesson?.id ?? createdLessonId ?? ''
-  const isFormBusy = isSubmitting || isVideoUploading
+  const isFormBusy = isSubmitting || isVideoUploading || isGeneratingThumbnail
   const isAwaitingUploadAfterCreate = Boolean(
     isAddMode &&
       createdLessonId &&
@@ -98,6 +104,9 @@ export function EditVideoLessonModal({
     setModuleNameError(undefined)
     setFormError(undefined)
     setIsSubmitting(false)
+    setThumbnailImage(lesson?.thumbnailImage ?? '')
+    setIsThumbnailConfigOpen(false)
+    setIsGeneratingThumbnail(false)
   }, [isOpen, lesson])
 
   const handleClose = useCallback(() => {
@@ -233,18 +242,58 @@ export function EditVideoLessonModal({
     onSaved()
 
     if (isAddMode) {
-      showSnackbar('Video lesson created and video uploaded successfully')
+      showSnackbar(
+        'Video lesson created and uploaded. A thumbnail will be generated automatically when processing finishes.',
+      )
       onClose()
       return
     }
 
-    showSnackbar('Video uploaded successfully')
+    showSnackbar(
+      'Video uploaded successfully. A thumbnail will be generated automatically when processing finishes.',
+    )
   }
 
   function handleVideoUploadingChange(isUploading: boolean) {
     setIsVideoUploading(isUploading)
     if (isUploading) {
       setHasVideoLinked(false)
+    }
+  }
+
+  function openThumbnailConfigModal() {
+    if (!lesson || isFormBusy) return
+    setIsThumbnailConfigOpen(true)
+  }
+
+  function closeThumbnailConfigModal() {
+    if (isGeneratingThumbnail) return
+    setIsThumbnailConfigOpen(false)
+  }
+
+  async function handleConfirmThumbnailGenerate(config: ThumbnailGenerationConfig) {
+    if (!lesson) return
+
+    setIsGeneratingThumbnail(true)
+
+    try {
+      const nextThumbnailImage = await generateVideoLessonThumbnail(
+        lesson.subjectId,
+        lesson.id,
+        config,
+      )
+      setThumbnailImage(nextThumbnailImage)
+      onSaved()
+      showSnackbar('Thumbnail generated successfully')
+      setIsThumbnailConfigOpen(false)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate thumbnail. Please try again.'
+      showSnackbar(message)
+    } finally {
+      setIsGeneratingThumbnail(false)
     }
   }
 
@@ -270,8 +319,16 @@ export function EditVideoLessonModal({
     lessonHasMuxVideo(lesson) &&
     !isReplacingOrUploadingVideo &&
     lesson.muxAssetStatus !== MUX_ASSET_STATUS.processing
+  const showThumbnailGenerate =
+    !isAddMode &&
+    lesson &&
+    lessonHasMuxVideo(lesson) &&
+    !isReplacingOrUploadingVideo &&
+    lesson.muxAssetStatus !== MUX_ASSET_STATUS.processing
+  const hasThumbnail = Boolean(thumbnailImage.trim())
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[2px]"
       role="presentation"
@@ -385,9 +442,35 @@ export function EditVideoLessonModal({
 
           {!isAddMode && lesson ? (
             <VideoLessonThumbnailPreview
-              key={lesson.id}
-              thumbnailUrl={lesson.thumbnailImage}
+              key={`${lesson.id}-${thumbnailImage}`}
+              thumbnailUrl={thumbnailImage}
               lessonName={lesson.lessonName}
+              headerAction={
+                showThumbnailGenerate ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isFormBusy}
+                    onClick={openThumbnailConfigModal}
+                    className="gap-1.5 px-3 py-2 text-body-md"
+                    aria-label={
+                      hasThumbnail
+                        ? `Regenerate thumbnail for ${lessonLabel}`
+                        : `Generate thumbnail for ${lessonLabel}`
+                    }
+                  >
+                    <MaterialIcon
+                      name={isGeneratingThumbnail ? 'hourglass_top' : 'auto_awesome'}
+                      size={16}
+                    />
+                    {isGeneratingThumbnail
+                      ? 'Generating...'
+                      : hasThumbnail
+                        ? 'Regenerate'
+                        : 'Generate'}
+                  </Button>
+                ) : null
+              }
             />
           ) : null}
 
@@ -458,5 +541,18 @@ export function EditVideoLessonModal({
         </div>
       </div>
     </div>
+
+    {isThumbnailConfigOpen && lesson ? (
+      <GenerateThumbnailConfigModal
+        action={{
+          type: 'single',
+          lessonLabel,
+        }}
+        isSubmitting={isGeneratingThumbnail}
+        onClose={closeThumbnailConfigModal}
+        onConfirm={handleConfirmThumbnailGenerate}
+      />
+    ) : null}
+    </>
   )
 }
