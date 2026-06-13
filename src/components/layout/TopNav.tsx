@@ -1,7 +1,10 @@
+import { signOut } from 'firebase/auth'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { getBreadcrumbs, getNavItemByPath } from '@/config/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { auth } from '@/lib/firebase'
 
 function getDisplayName(
   displayName: string | null | undefined,
@@ -25,6 +28,47 @@ export function TopNav() {
   const { user } = useAuth()
   const breadcrumbs = getBreadcrumbs(pathname)
   const navItem = getNavItemByPath(pathname)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isProfileMenuOpen])
+
+  function handleToggleProfileMenu() {
+    setIsProfileMenuOpen((open) => !open)
+  }
+
+  async function handleLogout() {
+    setIsSigningOut(true)
+    setIsProfileMenuOpen(false)
+    try {
+      await signOut(auth)
+    } catch {
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <header className="flex h-topbar-height shrink-0 items-center justify-between border-b border-outline-variant bg-surface px-gutter">
@@ -74,10 +118,17 @@ export function TopNav() {
           />
         </div>
 
-        <div className="flex items-center border-l border-outline-variant pl-[25px]">
+        <div
+          ref={profileMenuRef}
+          className="relative flex items-center border-l border-outline-variant pl-[25px]"
+        >
           <button
             type="button"
             aria-label="Profile menu"
+            aria-haspopup="menu"
+            aria-expanded={isProfileMenuOpen}
+            aria-controls="profile-menu"
+            onClick={handleToggleProfileMenu}
             className="flex cursor-pointer items-center gap-3 rounded-full py-[6px] pl-[6px] pr-3 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
             {user?.photoURL ? (
@@ -102,7 +153,35 @@ export function TopNav() {
                 LMS Manager
               </span>
             </span>
+            <MaterialIcon
+              name="expand_more"
+              size={18}
+              className={[
+                'text-on-surface-variant transition-transform',
+                isProfileMenuOpen ? 'rotate-180' : '',
+              ].join(' ')}
+            />
           </button>
+
+          {isProfileMenuOpen ? (
+            <div
+              id="profile-menu"
+              role="menu"
+              aria-label="Profile menu"
+              className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[180px] overflow-hidden rounded-lg border border-outline-variant bg-surface-white py-1 shadow-tier-2"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogout}
+                disabled={isSigningOut}
+                className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left text-body-md text-on-surface-variant transition hover:bg-row-hover hover:text-on-surface focus-visible:bg-row-hover focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <MaterialIcon name="logout" size={18} />
+                {isSigningOut ? 'Signing out...' : 'Logout'}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>

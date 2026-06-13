@@ -26,6 +26,8 @@ type SelectFieldProps = {
   disabled?: boolean
   required?: boolean
   placeholder?: string
+  /** Hides the visible label and uses it as the trigger aria-label instead. */
+  compact?: boolean
   /** Where the menu opens relative to the trigger. `auto` flips up when space below is tight. */
   menuPlacement?: SelectMenuPlacement
 }
@@ -108,6 +110,7 @@ export function SelectField({
   disabled = false,
   required,
   placeholder = 'Select an option',
+  compact = false,
   menuPlacement = 'bottom',
 }: SelectFieldProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -250,21 +253,27 @@ export function SelectField({
   }
 
   return (
-    <div ref={containerRef} className="relative flex w-full flex-col gap-1">
-      <label htmlFor={id} className="text-label-sm text-on-surface">
-        {label}
-        {required ? (
-          <span className="text-error-red" aria-hidden="true">
-            {' '}
-            *
-          </span>
-        ) : null}
-      </label>
+    <div
+      ref={containerRef}
+      className={['relative flex w-full flex-col', compact ? 'gap-0' : 'gap-1'].join(' ')}
+    >
+      {compact ? null : (
+        <label htmlFor={id} className="text-label-sm text-on-surface">
+          {label}
+          {required ? (
+            <span className="text-error-red" aria-hidden="true">
+              {' '}
+              *
+            </span>
+          ) : null}
+        </label>
+      )}
       <button
         ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
+        aria-label={compact ? label : undefined}
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"

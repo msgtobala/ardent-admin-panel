@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react'
+import { TimePickerField } from '@/components/ui/TimePickerField'
 import {
   combineDateAndTimeValues,
   splitDatetimeLocalValue,
@@ -43,11 +44,10 @@ export function DateTimeFieldGroup({
     event.target.blur()
   }
 
-  function handleTimeChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleTimeChange(nextTimeValue: string) {
     if (!dateValue) return
 
-    onChange(combineDateAndTimeValues(dateValue, event.target.value, defaultTime))
-    event.target.blur()
+    onChange(combineDateAndTimeValues(dateValue, nextTimeValue, defaultTime))
   }
 
   return (
@@ -77,15 +77,11 @@ export function DateTimeFieldGroup({
           className={[inputClasses, error ? 'border-error-red' : ''].filter(Boolean).join(' ')}
           onChange={handleDateChange}
         />
-        <input
+        <TimePickerField
           id={timeInputId}
-          type="time"
-          required={required}
           value={timeValue}
+          defaultTime={defaultTime}
           disabled={disabled || !dateValue}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={[inputClasses, error ? 'border-error-red' : ''].filter(Boolean).join(' ')}
           onChange={handleTimeChange}
         />
       </div>

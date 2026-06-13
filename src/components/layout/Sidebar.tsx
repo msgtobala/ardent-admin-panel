@@ -1,24 +1,10 @@
-import { signOut } from 'firebase/auth'
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ardentLogo from '@/assets/ardent-logo.png'
 import { NAV_COLLAPSIBLE_GROUPS, NAV_ITEMS } from '@/config/navigation'
 import { SidebarNavGroup } from './SidebarNavGroup'
-import { auth } from '@/lib/firebase'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 export function Sidebar() {
-  const [isSigningOut, setIsSigningOut] = useState(false)
-
-  async function handleLogout() {
-    setIsSigningOut(true)
-    try {
-      await signOut(auth)
-    } catch {
-      setIsSigningOut(false)
-    }
-  }
-
   return (
     <aside className="flex h-full w-sidebar-width shrink-0 flex-col border-r border-border-subtle bg-surface-white py-gutter shadow-tier-1">
       <div className="mb-8 px-gutter">
@@ -59,19 +45,6 @@ export function Sidebar() {
           <SidebarNavGroup key={group.label} group={group} />
         ))}
       </nav>
-
-      <div className="mt-auto border-t border-border-subtle px-gutter pt-[17px]">
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={isSigningOut}
-          aria-label="Logout"
-          className="flex w-full cursor-pointer items-center gap-3 py-3 text-body-md text-on-surface-variant transition hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <MaterialIcon name="logout" size={18} />
-          {isSigningOut ? 'Signing out...' : 'Logout'}
-        </button>
-      </div>
     </aside>
   )
 }
