@@ -1,6 +1,7 @@
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
 import { getFirestoreErrorDetails } from '@/lib/firestore-error'
+import { searchStudents } from '@/lib/search-students'
 import {
   STUDENTS_PAGE_SIZE,
   fetchStudentsPage,
@@ -18,6 +19,7 @@ export function useStudents() {
     (QueryDocumentSnapshot<DocumentData> | null)[]
   >([null])
   const [hasNext, setHasNext] = useState(false)
+  const [hasPrevious, setHasPrevious] = useState(false)
   const [lastDocOnPage, setLastDocOnPage] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
   const [sortField, setSortField] = useState<StudentSortField>('name')
@@ -27,7 +29,6 @@ export function useStudents() {
   const [errorIndexUrl, setErrorIndexUrl] = useState<string | undefined>()
 
   const isSearchActive = appliedSearchQuery.trim().length > 0
-  const hasPrevious = pageIndex > 0
   const currentPage = pageIndex + 1
   const totalPages = totalCount === 0 ? 1 : Math.ceil(totalCount / STUDENTS_PAGE_SIZE)
 
@@ -56,13 +57,30 @@ export function useStudents() {
     applySearch('')
   }, [applySearch])
 
-  const loadPage = useCallback(
-    async (cursor: QueryDocumentSnapshot<DocumentData> | null) => {
+  const loadCurrentPage = useCallback(
+    async (isActive: () => boolean) => {
       setIsLoading(true)
       setError(undefined)
       setErrorIndexUrl(undefined)
 
       try {
+        if (isSearchActive) {
+          const result = await searchStudents({
+            query: appliedSearchQuery,
+            page: pageIndex,
+            pageSize: STUDENTS_PAGE_SIZE,
+          })
+
+          if (!isActive()) return
+
+          setStudents(result.students)
+          setTotalCount(result.totalCount)
+          setHasNext(result.hasNext)
+          setHasPrevious(result.hasPrevious)
+          return
+        }
+
+        const cursor = pageCursors[pageIndex] ?? null
         const shouldFetchCount = cursor === null
         const [pageResult, count] = await Promise.all([
           fetchStudentsPage({
@@ -70,37 +88,68 @@ export function useStudents() {
             lastDoc: cursor,
             sortField,
             sortDirection,
-            searchQuery: appliedSearchQuery,
+            searchQuery: '',
           }),
-          shouldFetchCount
-            ? getStudentsCount({ searchQuery: appliedSearchQuery })
-            : Promise.resolve(undefined),
+          shouldFetchCount ? getStudentsCount() : Promise.resolve(undefined),
         ])
+
+        if (!isActive()) return
 
         setStudents(pageResult.students)
         if (count !== undefined) setTotalCount(count)
         setHasNext(pageResult.hasMore)
+        setHasPrevious(pageIndex > 0)
         setLastDocOnPage(pageResult.lastDoc)
       } catch (loadError) {
-        const details = getFirestoreErrorDetails(
-          loadError,
-          'Failed to load students. Please try again.',
-        )
-        setError(details.message)
-        setErrorIndexUrl(details.indexUrl)
+        if (!isActive()) return
+
+        if (isSearchActive) {
+          const message =
+            loadError instanceof Error
+              ? loadError.message
+              : 'Failed to search students. Please try again.'
+          setError(message)
+          setErrorIndexUrl(undefined)
+        } else {
+          const details = getFirestoreErrorDetails(
+            loadError,
+            'Failed to load students. Please try again.',
+          )
+          setError(details.message)
+          setErrorIndexUrl(details.indexUrl)
+        }
+
         setStudents([])
         setHasNext(false)
+        setHasPrevious(false)
         setLastDocOnPage(null)
       } finally {
-        setIsLoading(false)
+        if (isActive()) setIsLoading(false)
       }
     },
-    [appliedSearchQuery, sortDirection, sortField],
+    [
+      appliedSearchQuery,
+      isSearchActive,
+      pageCursors,
+      pageIndex,
+      sortDirection,
+      sortField,
+    ],
   )
 
   useEffect(() => {
-    loadPage(pageCursors[pageIndex] ?? null)
-  }, [pageIndex, pageCursors, loadPage])
+    let active = true
+
+    void (async () => {
+      await Promise.resolve()
+      if (!active) return
+      await loadCurrentPage(() => active)
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [loadCurrentPage])
 
   const handleSort = useCallback(
     (field: StudentSortField) => {
@@ -122,7 +171,14 @@ export function useStudents() {
   )
 
   const handleNext = useCallback(() => {
-    if (!hasNext || isLoading || !lastDocOnPage) return
+    if (!hasNext || isLoading) return
+
+    if (isSearchActive) {
+      setPageIndex((prev) => prev + 1)
+      return
+    }
+
+    if (!lastDocOnPage) return
 
     setPageCursors((prev) => {
       const next = [...prev]
@@ -130,7 +186,7 @@ export function useStudents() {
       return next
     })
     setPageIndex((prev) => prev + 1)
-  }, [hasNext, isLoading, lastDocOnPage, pageIndex])
+  }, [hasNext, isLoading, isSearchActive, lastDocOnPage, pageIndex])
 
   const handlePrevious = useCallback(() => {
     if (!hasPrevious || isLoading) return
@@ -138,12 +194,12 @@ export function useStudents() {
   }, [hasPrevious, isLoading])
 
   const handleRetry = useCallback(() => {
-    loadPage(pageCursors[pageIndex] ?? null)
-  }, [loadPage, pageCursors, pageIndex])
+    void loadCurrentPage(() => true)
+  }, [loadCurrentPage])
 
   const refreshStudents = useCallback(() => {
-    loadPage(pageCursors[pageIndex] ?? null)
-  }, [loadPage, pageCursors, pageIndex])
+    void loadCurrentPage(() => true)
+  }, [loadCurrentPage])
 
   const isInitialLoading = isLoading && students.length === 0 && !error
   const isPageLoading = isLoading && students.length > 0
