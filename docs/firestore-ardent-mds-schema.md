@@ -645,9 +645,41 @@ User support / feedback queries.
 | Field | Type |
 |-------|------|
 | `id` | string |
-| `user_id` | string |
-| `title` | string |
+| `userId` | string |
+| `type` | string (`qbanks`, `quiz`, `video`, `payment`, `test_series`, `general`) |
 | `description` | string |
+| `status` | string (`opened`, `resolved`, `rejected`; default on create = `opened`) |
+| `createdAt` | timestamp |
+| `updatedAt` | timestamp |
+| `context` | map (optional; shape varies by `type`) |
+
+#### `context` shapes
+
+**`qbanks`**
+
+| Field | Type |
+|-------|------|
+| `subject` | map `{ id, name }` |
+| `chapter` | map `{ id, name, moduleName? }` |
+| `question` | map `{ id }` (optional) |
+
+**`video`**
+
+| Field | Type |
+|-------|------|
+| `subject` | map `{ id, name }` |
+| `module` | map `{ name }` |
+| `lesson` | map `{ id }` (optional) |
+
+**Other types:** `context` omitted or null.
+
+#### Admin operations
+
+- Admins (custom claim `admin: true`) may read all documents in `user_queries`.
+- Signed-in users may read their own tickets (`userId == auth.uid`).
+- Users may create tickets with `status: opened` only.
+- Admins may update `status` and `updatedAt` only (`opened`, `resolved`, or `rejected`).
+- Apply matching rules in Firebase Console before using the admin panel User Queries page.
 
 ---
 

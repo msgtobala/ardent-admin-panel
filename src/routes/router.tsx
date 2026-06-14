@@ -25,6 +25,7 @@ import GenerateThumbnailPage from '@/pages/GenerateThumbnailPage'
 import VideosPage from '@/pages/VideosPage'
 import SuggestedVideosPage from '@/pages/SuggestedVideosPage'
 import StudentsPage from '@/pages/StudentsPage'
+import UserQueriesPage from '@/pages/UserQueriesPage'
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +57,10 @@ export const router = createBrowserRouter([
       {
         path: 'students',
         element: <StudentsPage />,
+      },
+      {
+        path: 'user-queries',
+        element: <UserQueriesPage />,
       },
       {
         path: 'users',

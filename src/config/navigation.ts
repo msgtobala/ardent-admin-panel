@@ -167,6 +167,12 @@ export const NAV_ITEMS: NavItem[] = [
     breadcrumbs: { parent: 'Students', current: 'Overview' },
   },
   {
+    label: 'User Queries',
+    path: '/user-queries',
+    icon: 'support_agent',
+    breadcrumbs: { parent: 'User Queries', current: 'Overview' },
+  },
+  {
     label: 'MCQ of the Day',
     path: '/mcq-of-the-day',
     icon: 'today',
