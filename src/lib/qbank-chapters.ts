@@ -126,6 +126,7 @@ export async function createQbankChapter(
     questionsCount: 0,
     microtopics: [],
     rating: 0,
+    ratingCount: 0,
     sortOrder: input.sortOrder,
     isActive: input.isActive,
     isFree: input.isFree,

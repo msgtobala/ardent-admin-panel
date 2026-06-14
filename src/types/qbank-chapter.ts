@@ -49,6 +49,7 @@ export interface QbankChapterDocument {
   questionsCount?: number
   microtopics?: unknown[]
   rating?: number
+  ratingCount?: number
   sortOrder?: number
   isActive?: boolean
   isFree?: boolean
