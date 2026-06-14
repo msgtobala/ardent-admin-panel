@@ -30,6 +30,7 @@ export interface VideoLesson {
   facultyId: string
   sortOrder: number
   rating: number
+  ratingCount: number
   isActive: boolean
   isFree: boolean
   studentsCompleted: number
@@ -53,6 +54,7 @@ export interface VideoLessonDocument {
   facultyId?: string
   sortOrder?: number
   rating?: number
+  ratingCount?: number
   isActive?: boolean
   isFree?: boolean
   studentsCompleted?: number
