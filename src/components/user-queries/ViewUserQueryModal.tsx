@@ -1,29 +1,29 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect } from "react";
 import {
   formatUserQueryContextSummary,
   formatUserQueryType,
   getUserQueryContextDetails,
   getUserQueryQuestionRefs,
   getUserQueryVideoRefs,
-} from '@/lib/user-query-display'
-import { formatBannerDate } from '@/lib/format-date'
-import type { UserQueryStatusAction } from '@/hooks/useUserQueriesPage'
-import type { UserQuery } from '@/types/user-query'
-import { Button } from '@/components/ui/Button'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { UserQueryLinkedQuestionSection } from '@/components/user-queries/UserQueryLinkedQuestionSection'
-import { UserQueryLinkedVideoSection } from '@/components/user-queries/UserQueryLinkedVideoSection'
-import { UserQueryStatusBadge } from '@/components/user-queries/UserQueryStatusBadge'
+} from "@/lib/user-query-display";
+import { formatBannerDate } from "@/lib/format-date";
+import type { UserQueryStatusAction } from "@/hooks/useUserQueriesPage";
+import type { UserQuery } from "@/types/user-query";
+import { Button } from "@/components/ui/Button";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { UserQueryLinkedQuestionSection } from "@/components/user-queries/UserQueryLinkedQuestionSection";
+import { UserQueryLinkedVideoSection } from "@/components/user-queries/UserQueryLinkedVideoSection";
+import { UserQueryStatusBadge } from "@/components/user-queries/UserQueryStatusBadge";
 
 interface ViewUserQueryModalProps {
-  isOpen: boolean
-  query: UserQuery | null
-  isUpdatingStatus: boolean
-  pendingStatusAction: UserQueryStatusAction | null
-  onClose: () => void
-  onResolve: (id: string) => Promise<void>
-  onReject: (id: string) => Promise<void>
-  onReopen: (id: string) => Promise<void>
+  isOpen: boolean;
+  query: UserQuery | null;
+  isUpdatingStatus: boolean;
+  pendingStatusAction: UserQueryStatusAction | null;
+  onClose: () => void;
+  onResolve: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+  onReopen: (id: string) => Promise<void>;
 }
 
 function DetailField({ label, value }: { label: string; value: string }) {
@@ -32,11 +32,11 @@ function DetailField({ label, value }: { label: string; value: string }) {
       <span className="text-label-sm font-medium text-on-surface-variant">
         {label}
       </span>
-      <span className="whitespace-pre-wrap break-words text-body-md text-on-surface">
+      <span className="whitespace-pre-wrap wrap-break-word text-body-md text-on-surface">
         {value}
       </span>
     </div>
-  )
+  );
 }
 
 export function ViewUserQueryModal({
@@ -50,51 +50,51 @@ export function ViewUserQueryModal({
   onReopen,
 }: ViewUserQueryModalProps) {
   const handleClose = useCallback(() => {
-    if (isUpdatingStatus) return
-    onClose()
-  }, [isUpdatingStatus, onClose])
+    if (isUpdatingStatus) return;
+    onClose();
+  }, [isUpdatingStatus, onClose]);
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') handleClose()
+      if (event.key === "Escape") handleClose();
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    document.body.style.overflow = 'hidden'
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
-    }
-  }, [isOpen, handleClose])
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, handleClose]);
 
-  if (!isOpen || !query) return null
+  if (!isOpen || !query) return null;
 
-  const contextDetails = getUserQueryContextDetails(query)
-  const questionRefs = getUserQueryQuestionRefs(query)
-  const videoRefs = getUserQueryVideoRefs(query)
-  const isOpened = query.status === 'opened'
-  const isResolved = query.status === 'resolved'
-  const queryId = query.id
-  const isResolving = isUpdatingStatus && pendingStatusAction === 'resolve'
-  const isRejecting = isUpdatingStatus && pendingStatusAction === 'reject'
-  const isReopening = isUpdatingStatus && pendingStatusAction === 'reopen'
+  const contextDetails = getUserQueryContextDetails(query);
+  const questionRefs = getUserQueryQuestionRefs(query);
+  const videoRefs = getUserQueryVideoRefs(query);
+  const isOpened = query.status === "opened";
+  const isResolved = query.status === "resolved";
+  const queryId = query.id;
+  const isResolving = isUpdatingStatus && pendingStatusAction === "resolve";
+  const isRejecting = isUpdatingStatus && pendingStatusAction === "reject";
+  const isReopening = isUpdatingStatus && pendingStatusAction === "reopen";
 
   async function handleResolve() {
-    if (!isOpened || isUpdatingStatus) return
-    await onResolve(queryId)
+    if (!isOpened || isUpdatingStatus) return;
+    await onResolve(queryId);
   }
 
   async function handleReject() {
-    if (!isOpened || isUpdatingStatus) return
-    await onReject(queryId)
+    if (!isOpened || isUpdatingStatus) return;
+    await onReject(queryId);
   }
 
   async function handleReopen() {
-    if (!isResolved || isUpdatingStatus) return
-    await onReopen(queryId)
+    if (!isResolved || isUpdatingStatus) return;
+    await onReopen(queryId);
   }
 
   return (
@@ -153,7 +153,7 @@ export function ViewUserQueryModal({
             label="Subject / context"
             value={formatUserQueryContextSummary(query)}
           />
-          <DetailField label="Description" value={query.description || '—'} />
+          <DetailField label="Description" value={query.description || "—"} />
 
           {contextDetails.length > 0 ? (
             <div className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-4 py-4">
@@ -177,7 +177,9 @@ export function ViewUserQueryModal({
           {videoRefs ? (
             <UserQueryLinkedVideoSection
               refs={videoRefs}
-              fallbackLabel={query.context?.module?.name?.trim() || videoRefs.lessonRefId}
+              fallbackLabel={
+                query.context?.module?.name?.trim() || videoRefs.lessonRefId
+              }
             />
           ) : null}
         </div>
@@ -195,7 +197,7 @@ export function ViewUserQueryModal({
               className="gap-2"
             >
               <MaterialIcon name="undo" size={16} />
-              {isReopening ? 'Reopening…' : 'Reopen ticket'}
+              {isReopening ? "Reopening…" : "Reopen ticket"}
             </Button>
           ) : null}
           {isOpened ? (
@@ -208,7 +210,7 @@ export function ViewUserQueryModal({
                 className="gap-2"
               >
                 <MaterialIcon name="block" size={16} />
-                {isRejecting ? 'Rejecting…' : 'Reject ticket'}
+                {isRejecting ? "Rejecting…" : "Reject ticket"}
               </Button>
               <Button
                 type="button"
@@ -217,12 +219,12 @@ export function ViewUserQueryModal({
                 className="gap-2"
               >
                 <MaterialIcon name="check_circle" size={16} />
-                {isResolving ? 'Resolving…' : 'Mark as resolved'}
+                {isResolving ? "Resolving…" : "Mark as resolved"}
               </Button>
             </>
           ) : null}
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react'
-import { fetchFullQbankQuestionDetails } from '@/lib/qbank-references'
+import { useEffect, useState } from "react";
+import { fetchFullQbankQuestionDetails } from "@/lib/qbank-references";
 import {
   isCorrectAnswerOption,
   resolveCorrectAnswerChoice,
   resolveCorrectAnswerDescription,
-} from '@/lib/qbank-question-display'
-import type { UserQueryQuestionRefs } from '@/lib/user-query-display'
-import type { FullQbankQuestionDetails } from '@/types/qbank-question'
-import { CircularLoader } from '@/components/ui/CircularLoader'
+} from "@/lib/qbank-question-display";
+import type { UserQueryQuestionRefs } from "@/lib/user-query-display";
+import type { FullQbankQuestionDetails } from "@/types/qbank-question";
+import { CircularLoader } from "@/components/ui/CircularLoader";
 
 interface UserQueryLinkedQuestionSectionProps {
-  refs: UserQueryQuestionRefs
+  refs: UserQueryQuestionRefs;
 }
 
 function DetailField({ label, value }: { label: string; value: string }) {
@@ -19,19 +19,23 @@ function DetailField({ label, value }: { label: string; value: string }) {
       <span className="text-label-sm font-medium text-on-surface-variant">
         {label}
       </span>
-      <span className="whitespace-pre-wrap break-words text-body-md text-on-surface">
-        {value || '—'}
+      <span className="whitespace-pre-wrap wrap-break-word text-body-md text-on-surface">
+        {value || "—"}
       </span>
     </div>
-  )
+  );
 }
 
 function QuestionDetailsLoadingSkeleton() {
   return (
-    <div className="relative flex flex-col gap-4" aria-busy="true" aria-live="polite">
+    <div
+      className="relative flex flex-col gap-4"
+      aria-busy="true"
+      aria-live="polite"
+    >
       <div className="h-5 w-full max-w-md animate-pulse rounded bg-surface-container" />
       <div className="flex flex-col gap-2">
-        {['a', 'b', 'c', 'd'].map((key) => (
+        {["a", "b", "c", "d"].map((key) => (
           <div
             key={key}
             className="h-12 animate-pulse rounded-input bg-surface-container"
@@ -45,63 +49,66 @@ function QuestionDetailsLoadingSkeleton() {
         <CircularLoader size="md" label="Loading question details" />
       </div>
     </div>
-  )
+  );
 }
 
 export function UserQueryLinkedQuestionSection({
   refs,
 }: UserQueryLinkedQuestionSectionProps) {
-  const [details, setDetails] = useState<FullQbankQuestionDetails | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | undefined>()
+  const [details, setDetails] = useState<FullQbankQuestionDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
 
   useEffect(() => {
-    let isCancelled = false
+    let isCancelled = false;
 
     async function loadDetails() {
-      setIsLoading(true)
-      setError(undefined)
-      setDetails(null)
+      setIsLoading(true);
+      setError(undefined);
+      setDetails(null);
 
       try {
         const fullDetails = await fetchFullQbankQuestionDetails(
           refs.subjectRefId,
           refs.chapterRefId,
           refs.questionRefId,
-        )
+        );
 
-        if (isCancelled) return
+        if (isCancelled) return;
 
         if (!fullDetails) {
-          setError('Question details could not be found in the qbank.')
-          return
+          setError("Question details could not be found in the qbank.");
+          return;
         }
 
-        setDetails(fullDetails)
+        setDetails(fullDetails);
       } catch {
-        if (isCancelled) return
-        setError('Failed to load question details. Please try again.')
+        if (isCancelled) return;
+        setError("Failed to load question details. Please try again.");
       } finally {
-        if (!isCancelled) setIsLoading(false)
+        if (!isCancelled) setIsLoading(false);
       }
     }
 
-    loadDetails()
+    loadDetails();
 
     return () => {
-      isCancelled = true
-    }
-  }, [refs.subjectRefId, refs.chapterRefId, refs.questionRefId])
+      isCancelled = true;
+    };
+  }, [refs.subjectRefId, refs.chapterRefId, refs.questionRefId]);
 
-  const correctOptionKey = details?.correctAnswer?.option ?? ''
-  const rawCorrectDescription = details?.correctAnswer?.description ?? ''
-  const answerOptions = details?.answerOptions ?? []
-  const correctAnswerText = resolveCorrectAnswerChoice(answerOptions, correctOptionKey)
+  const correctOptionKey = details?.correctAnswer?.option ?? "";
+  const rawCorrectDescription = details?.correctAnswer?.description ?? "";
+  const answerOptions = details?.answerOptions ?? [];
+  const correctAnswerText = resolveCorrectAnswerChoice(
+    answerOptions,
+    correctOptionKey,
+  );
   const correctAnswerDescription = resolveCorrectAnswerDescription(
     rawCorrectDescription,
     correctOptionKey,
     correctAnswerText,
-  )
+  );
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-4 py-4">
@@ -144,22 +151,24 @@ export function UserQueryLinkedQuestionSection({
                     answerOption,
                     optionIndex,
                     correctOptionKey,
-                  )
+                  );
 
                   return (
                     <li
                       key={`${answerOption.option}-${answerOption.choice}`}
                       className={[
-                        'rounded-input border px-3 py-2 text-body-md text-on-surface',
+                        "rounded-input border px-3 py-2 text-body-md text-on-surface",
                         isCorrect
-                          ? 'border-success-green bg-success-bg font-medium'
-                          : 'border-border-subtle bg-surface-white',
-                      ].join(' ')}
+                          ? "border-success-green bg-success-bg font-medium"
+                          : "border-border-subtle bg-surface-white",
+                      ].join(" ")}
                     >
-                      <span className="font-semibold">{answerOption.option}. </span>
+                      <span className="font-semibold">
+                        {answerOption.option}.{" "}
+                      </span>
                       {answerOption.choice}
                     </li>
-                  )
+                  );
                 })}
               </ul>
             ) : (
@@ -174,5 +183,5 @@ export function UserQueryLinkedQuestionSection({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
