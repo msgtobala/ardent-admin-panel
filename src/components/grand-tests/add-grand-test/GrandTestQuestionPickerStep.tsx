@@ -1,34 +1,55 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 import {
   fetchQbankChapterOptions,
   fetchQbankQuestionOptions,
   type QbankQuestionOption,
-} from '@/lib/qbank-references'
-import { fetchQbankSubjects } from '@/lib/qbank-subjects'
-import type { QbankSubject } from '@/types/qbank-subject'
-import type { SelectedGrandTestQuestion } from '@/types/grand-test'
-import { Button } from '@/components/ui/Button'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { SelectField, type SelectOption } from '@/components/ui/SelectField'
-import { TextField } from '@/components/ui/TextField'
-import { GrandTestChapterQuestionList } from './GrandTestChapterQuestionList'
-import { GrandTestCustomQuestionModal } from './GrandTestCustomQuestionModal'
-import { SelectedQuestionsList } from './SelectedQuestionsList'
+} from "@/lib/qbank-references";
+import { fetchQbankSubjects } from "@/lib/qbank-subjects";
+import type { QbankSubject } from "@/types/qbank-subject";
+import type { SelectedGrandTestQuestion } from "@/types/grand-test";
+import { Button } from "@/components/ui/Button";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { SelectField, type SelectOption } from "@/components/ui/SelectField";
+import { TextField } from "@/components/ui/TextField";
+import { GrandTestChapterQuestionList } from "./GrandTestChapterQuestionList";
+import { GrandTestCustomQuestionModal } from "./GrandTestCustomQuestionModal";
+import { GrandTestQuestionDetailModal } from "./GrandTestQuestionDetailModal";
+import { GrandTestTestConfigBar } from "./GrandTestTestConfigBar";
+import { SelectedQuestionsList } from "./SelectedQuestionsList";
 
 interface GrandTestQuestionPickerStepProps {
-  duration: string
-  questions: string
-  selectedQuestions: SelectedGrandTestQuestion[]
-  disabled?: boolean
-  durationError?: string
-  questionsError?: string
-  selectedQuestionsError?: string
-  formError?: string
-  layout?: 'modal' | 'page'
-  onDurationChange: (value: string) => void
-  onQuestionsChange: (value: string) => void
-  onSelectedQuestionsChange: (questions: SelectedGrandTestQuestion[]) => void
-  onClearFormError?: () => void
+  duration: string;
+  questions: string;
+  selectedQuestions: SelectedGrandTestQuestion[];
+  disabled?: boolean;
+  durationError?: string;
+  questionsError?: string;
+  selectedQuestionsError?: string;
+  formError?: string;
+  onDurationChange: (value: string) => void;
+  onQuestionsChange: (value: string) => void;
+  onSelectedQuestionsChange: (questions: SelectedGrandTestQuestion[]) => void;
+  onClearFormError?: () => void;
+}
+
+function filterChapterQuestions(
+  questions: QbankQuestionOption[],
+  searchQuery: string,
+): QbankQuestionOption[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  if (!normalizedQuery) return questions;
+
+  return questions.filter((question) => {
+    const haystack = [
+      question.questionRefId,
+      question.questionText,
+      question.label,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalizedQuery);
+  });
 }
 
 export function GrandTestQuestionPickerStep({
@@ -40,175 +61,199 @@ export function GrandTestQuestionPickerStep({
   questionsError,
   selectedQuestionsError,
   formError,
-  layout = 'page',
   onDurationChange,
   onQuestionsChange,
   onSelectedQuestionsChange,
   onClearFormError,
 }: GrandTestQuestionPickerStepProps) {
-  const [subjectRefId, setSubjectRefId] = useState('')
-  const [chapterRefId, setChapterRefId] = useState('')
-  const [pendingQuestionIds, setPendingQuestionIds] = useState<string[]>([])
-  const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null)
-  const [subjects, setSubjects] = useState<QbankSubject[]>([])
-  const [subjectOptions, setSubjectOptions] = useState<SelectOption[]>([])
-  const [isCustomQuestionModalOpen, setIsCustomQuestionModalOpen] = useState(false)
+  const [subjectRefId, setSubjectRefId] = useState("");
+  const [chapterRefId, setChapterRefId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [detailQuestion, setDetailQuestion] =
+    useState<SelectedGrandTestQuestion | null>(null);
+  const [subjects, setSubjects] = useState<QbankSubject[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<SelectOption[]>([]);
+  const [isCustomQuestionModalOpen, setIsCustomQuestionModalOpen] =
+    useState(false);
   const [editingCustomQuestion, setEditingCustomQuestion] =
-    useState<SelectedGrandTestQuestion | null>(null)
-  const [chapterOptions, setChapterOptions] = useState<SelectOption[]>([])
-  const [chapterQuestions, setChapterQuestions] = useState<QbankQuestionOption[]>([])
-  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false)
-  const [isLoadingChapters, setIsLoadingChapters] = useState(false)
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false)
-  const [loadError, setLoadError] = useState<string | undefined>()
+    useState<SelectedGrandTestQuestion | null>(null);
+  const [chapterOptions, setChapterOptions] = useState<SelectOption[]>([]);
+  const [chapterQuestions, setChapterQuestions] = useState<
+    QbankQuestionOption[]
+  >([]);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+  const [isLoadingChapters, setIsLoadingChapters] = useState(false);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [loadError, setLoadError] = useState<string | undefined>();
 
-  const isFormDisabled = disabled || isLoadingSubjects
+  const isFormDisabled = disabled || isLoadingSubjects;
 
   const alreadyAddedIds = useMemo(
     () => new Set(selectedQuestions.map((question) => question.documentId)),
     [selectedQuestions],
-  )
+  );
+
+  const filteredChapterQuestions = useMemo(
+    () => filterChapterQuestions(chapterQuestions, searchQuery),
+    [chapterQuestions, searchQuery],
+  );
+
+  const addableFilteredQuestions = useMemo(
+    () =>
+      filteredChapterQuestions.filter(
+        (question) => !alreadyAddedIds.has(question.documentId),
+      ),
+    [filteredChapterQuestions, alreadyAddedIds],
+  );
 
   useEffect(() => {
-    let isCancelled = false
+    let isCancelled = false;
 
     async function loadSubjects() {
-      setIsLoadingSubjects(true)
-      setLoadError(undefined)
+      setIsLoadingSubjects(true);
+      setLoadError(undefined);
 
       try {
-        const loadedSubjects = await fetchQbankSubjects()
-        if (isCancelled) return
+        const loadedSubjects = await fetchQbankSubjects();
+        if (isCancelled) return;
 
-        setSubjects(loadedSubjects)
+        setSubjects(loadedSubjects);
         setSubjectOptions(
           loadedSubjects.map((subject) => ({
             value: subject.id,
             label: subject.subjectName || subject.id,
           })),
-        )
+        );
       } catch {
         if (!isCancelled) {
-          setLoadError('Failed to load qbank subjects. Please try again.')
+          setLoadError("Failed to load qbank subjects. Please try again.");
         }
       } finally {
-        if (!isCancelled) setIsLoadingSubjects(false)
+        if (!isCancelled) setIsLoadingSubjects(false);
       }
     }
 
-    loadSubjects()
+    loadSubjects();
 
     return () => {
-      isCancelled = true
-    }
-  }, [])
+      isCancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!subjectRefId) {
-      return
+      return;
     }
 
-    let isCancelled = false
+    let isCancelled = false;
 
     async function loadChapters() {
-      setIsLoadingChapters(true)
-      setLoadError(undefined)
+      setIsLoadingChapters(true);
+      setLoadError(undefined);
 
       try {
-        const chapters = await fetchQbankChapterOptions(subjectRefId)
-        if (isCancelled) return
+        const chapters = await fetchQbankChapterOptions(subjectRefId);
+        if (isCancelled) return;
 
         setChapterOptions(
           chapters.map((chapter) => ({
             value: chapter.id,
             label: chapter.chapterName,
           })),
-        )
+        );
       } catch {
         if (!isCancelled) {
-          setLoadError('Failed to load chapters for the selected subject.')
+          setLoadError("Failed to load chapters for the selected subject.");
         }
       } finally {
-        if (!isCancelled) setIsLoadingChapters(false)
+        if (!isCancelled) setIsLoadingChapters(false);
       }
     }
 
-    loadChapters()
+    loadChapters();
 
     return () => {
-      isCancelled = true
-    }
-  }, [subjectRefId])
+      isCancelled = true;
+    };
+  }, [subjectRefId]);
 
   useEffect(() => {
     if (!subjectRefId || !chapterRefId) {
-      return
+      return;
     }
 
-    let isCancelled = false
+    let isCancelled = false;
 
     async function loadQuestions() {
-      setIsLoadingQuestions(true)
-      setLoadError(undefined)
+      setIsLoadingQuestions(true);
+      setLoadError(undefined);
 
       try {
-        const questions = await fetchQbankQuestionOptions(subjectRefId, chapterRefId)
-        if (isCancelled) return
+        const loadedQuestions = await fetchQbankQuestionOptions(
+          subjectRefId,
+          chapterRefId,
+        );
+        if (isCancelled) return;
 
-        setChapterQuestions(questions)
-        setPendingQuestionIds([])
-        setExpandedDetailId(null)
+        setChapterQuestions(loadedQuestions);
+        setSearchQuery("");
       } catch {
         if (!isCancelled) {
-          setLoadError('Failed to load questions for the selected chapter.')
+          setLoadError("Failed to load questions for the selected chapter.");
         }
       } finally {
-        if (!isCancelled) setIsLoadingQuestions(false)
+        if (!isCancelled) setIsLoadingQuestions(false);
       }
     }
 
-    loadQuestions()
+    loadQuestions();
 
     return () => {
-      isCancelled = true
-    }
-  }, [subjectRefId, chapterRefId])
+      isCancelled = true;
+    };
+  }, [subjectRefId, chapterRefId]);
 
   const chapterSelectDisabled = useMemo(
     () => isFormDisabled || isLoadingChapters || !subjectRefId,
     [isFormDisabled, isLoadingChapters, subjectRefId],
-  )
+  );
 
   const selectedSubject =
-    subjects.find((subject) => subject.id === subjectRefId) ?? null
-  const selectedSubjectLabel = selectedSubject?.subjectName || subjectRefId
+    subjects.find((subject) => subject.id === subjectRefId) ?? null;
+  const selectedSubjectLabel = selectedSubject?.subjectName || subjectRefId;
   const selectedChapterLabel =
-    chapterOptions.find((option) => option.value === chapterRefId)?.label ?? ''
+    chapterOptions.find((option) => option.value === chapterRefId)?.label ?? "";
+
+  const parsedTarget = Number(questions);
+  const targetCount =
+    Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : 0;
 
   function handleOpenCustomQuestionModal() {
-    if (!subjectRefId || !chapterRefId) return
-    setEditingCustomQuestion(null)
-    setIsCustomQuestionModalOpen(true)
-    onClearFormError?.()
+    if (!subjectRefId || !chapterRefId) return;
+    setEditingCustomQuestion(null);
+    setIsCustomQuestionModalOpen(true);
+    onClearFormError?.();
   }
 
   function handleCloseCustomQuestionModal() {
-    setIsCustomQuestionModalOpen(false)
-    setEditingCustomQuestion(null)
+    setIsCustomQuestionModalOpen(false);
+    setEditingCustomQuestion(null);
   }
 
   function handleAddCustomQuestion(question: SelectedGrandTestQuestion) {
-    onSelectedQuestionsChange([...selectedQuestions, question])
-    onClearFormError?.()
+    onSelectedQuestionsChange([...selectedQuestions, question]);
+    onClearFormError?.();
   }
 
   function handleEditCustomQuestion(documentId: string) {
-    const question = selectedQuestions.find((item) => item.documentId === documentId)
-    if (!question?.isCustom || !question.customDraft) return
+    const question = selectedQuestions.find(
+      (item) => item.documentId === documentId,
+    );
+    if (!question?.isCustom || !question.customDraft) return;
 
-    setEditingCustomQuestion(question)
-    setIsCustomQuestionModalOpen(true)
-    onClearFormError?.()
+    setEditingCustomQuestion(question);
+    setIsCustomQuestionModalOpen(true);
+    onClearFormError?.();
   }
 
   function handleSaveCustomQuestion(question: SelectedGrandTestQuestion) {
@@ -216,186 +261,255 @@ export function GrandTestQuestionPickerStep({
       selectedQuestions.map((item) =>
         item.documentId === question.documentId ? question : item,
       ),
-    )
-    onClearFormError?.()
+    );
+    onClearFormError?.();
   }
 
-  function handleToggleSelect(documentId: string) {
-    if (alreadyAddedIds.has(documentId)) return
-
-    setPendingQuestionIds((previous) =>
-      previous.includes(documentId)
-        ? previous.filter((id) => id !== documentId)
-        : [...previous, documentId],
-    )
-    onClearFormError?.()
+  function buildSelectedQuestion(
+    question: QbankQuestionOption,
+  ): SelectedGrandTestQuestion {
+    return {
+      documentId: question.documentId,
+      questionRefId: question.questionRefId,
+      label: question.label,
+      questionText: question.questionText,
+      subjectRefId,
+      chapterRefId,
+      subjectName: selectedSubjectLabel || subjectRefId,
+      chapterName: selectedChapterLabel || chapterRefId,
+      source: "qbanks",
+    };
   }
 
-  function handleToggleDetails(documentId: string) {
-    setExpandedDetailId((previous) => (previous === documentId ? null : documentId))
+  function handleAddQuestion(documentId: string) {
+    if (alreadyAddedIds.has(documentId)) return;
+
+    const question = chapterQuestions.find(
+      (item) => item.documentId === documentId,
+    );
+    if (!question) return;
+
+    onSelectedQuestionsChange([
+      ...selectedQuestions,
+      buildSelectedQuestion(question),
+    ]);
+    onClearFormError?.();
   }
 
-  function handleAddSelectedQuestions() {
-    if (pendingQuestionIds.length === 0) return
+  function handleAddAllFromChapter() {
+    if (addableFilteredQuestions.length === 0) return;
 
-    const existingIds = new Set(selectedQuestions.map((question) => question.documentId))
-    const nextQuestions = [...selectedQuestions]
+    const existingIds = new Set(
+      selectedQuestions.map((question) => question.documentId),
+    );
+    const nextQuestions = [...selectedQuestions];
 
-    for (const documentId of pendingQuestionIds) {
-      if (existingIds.has(documentId)) continue
-
-      const question = chapterQuestions.find((item) => item.documentId === documentId)
-      if (!question) continue
-
-      nextQuestions.push({
-        documentId: question.documentId,
-        questionRefId: question.questionRefId,
-        label: question.label,
-        questionText: question.questionText,
-        subjectRefId,
-        chapterRefId,
-        subjectName: selectedSubjectLabel || subjectRefId,
-        chapterName: selectedChapterLabel || chapterRefId,
-        source: 'qbanks',
-      })
-      existingIds.add(documentId)
+    for (const question of addableFilteredQuestions) {
+      if (existingIds.has(question.documentId)) continue;
+      nextQuestions.push(buildSelectedQuestion(question));
+      existingIds.add(question.documentId);
     }
 
-    onSelectedQuestionsChange(nextQuestions)
-    setPendingQuestionIds([])
-    onClearFormError?.()
+    onSelectedQuestionsChange(nextQuestions);
+    onClearFormError?.();
   }
 
   function handleRemoveQuestion(documentId: string) {
     onSelectedQuestionsChange(
-      selectedQuestions.filter((question) => question.documentId !== documentId),
-    )
-    onClearFormError?.()
+      selectedQuestions.filter(
+        (question) => question.documentId !== documentId,
+      ),
+    );
+    onClearFormError?.();
   }
 
-  const listMaxHeightClass =
-    layout === 'page' ? 'max-h-[min(32rem,60vh)]' : 'max-h-80'
+  function handleClearAll() {
+    onSelectedQuestionsChange([]);
+    onClearFormError?.();
+  }
+
+  function handleViewChapterQuestion(documentId: string) {
+    const question = chapterQuestions.find(
+      (item) => item.documentId === documentId,
+    );
+    if (!question) return;
+
+    setDetailQuestion(buildSelectedQuestion(question));
+  }
+
+  function handleViewSelectedQuestion(documentId: string) {
+    const question = selectedQuestions.find(
+      (item) => item.documentId === documentId,
+    );
+    if (!question) return;
+
+    setDetailQuestion(question);
+  }
 
   return (
     <div className="flex flex-col gap-gutter">
-      <div className="grid gap-gutter lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="flex flex-col gap-gutter">
+      <GrandTestTestConfigBar
+        duration={duration}
+        questions={questions}
+        selectedCount={selectedQuestions.length}
+        disabled={disabled}
+        durationError={durationError}
+        questionsError={questionsError}
+        onDurationChange={onDurationChange}
+        onQuestionsChange={onQuestionsChange}
+      />
+
+      <div className="grid gap-gutter lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <section className="flex flex-col gap-gutter rounded-xl border border-border-subtle bg-surface-white p-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-card-title text-on-surface">
+              Browse questions
+            </h3>
+            <p className="text-body-md text-on-surface-variant">
+              Pick a subject and chapter, then add questions one at a time or in
+              bulk.
+            </p>
+          </div>
+
           <div className="grid gap-gutter sm:grid-cols-2">
-            <TextField
-              id="grand-test-duration"
-              label="Duration (minutes)"
-              type="number"
-              min={1}
-              required
-              value={duration}
-              disabled={disabled}
-              error={durationError}
-              placeholder="e.g. 120"
-              onChange={(event) => onDurationChange(event.target.value)}
+            <SelectField
+              id="grand-test-subject"
+              label="Subject"
+              value={subjectRefId}
+              options={subjectOptions}
+              disabled={isFormDisabled}
+              placeholder={
+                isLoadingSubjects ? "Loading subjects..." : "Select a subject"
+              }
+              onChange={(value) => {
+                setSubjectRefId(value);
+                setChapterRefId("");
+                setChapterOptions([]);
+                setChapterQuestions([]);
+                setSearchQuery("");
+                onClearFormError?.();
+              }}
             />
-            <TextField
-              id="grand-test-questions"
-              label="Number of Questions"
-              type="number"
-              min={1}
-              required
-              value={questions}
-              disabled={disabled}
-              error={questionsError}
-              placeholder="e.g. 50"
-              onChange={(event) => onQuestionsChange(event.target.value)}
+
+            <SelectField
+              id="grand-test-chapter"
+              label="Chapter"
+              value={chapterRefId}
+              options={chapterOptions}
+              disabled={chapterSelectDisabled}
+              placeholder={
+                !subjectRefId
+                  ? "Select a subject first"
+                  : isLoadingChapters
+                    ? "Loading chapters..."
+                    : "Select a chapter"
+              }
+              onChange={(value) => {
+                setChapterRefId(value);
+                setChapterQuestions([]);
+                setSearchQuery("");
+                onClearFormError?.();
+              }}
             />
           </div>
 
-          <SelectField
-            id="grand-test-subject"
-            label="Subject"
-            value={subjectRefId}
-            options={subjectOptions}
-            disabled={isFormDisabled}
-            placeholder={isLoadingSubjects ? 'Loading subjects...' : 'Select a subject'}
-            onChange={(value) => {
-              setSubjectRefId(value)
-              setChapterRefId('')
-              setChapterOptions([])
-              setChapterQuestions([])
-              setPendingQuestionIds([])
-              setExpandedDetailId(null)
-              onClearFormError?.()
-            }}
-          />
+          {chapterRefId ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <TextField
+                    id="grand-test-question-search"
+                    label="Search questions"
+                    type="search"
+                    value={searchQuery}
+                    disabled={disabled || isLoadingQuestions}
+                    placeholder="Search by ID or question text"
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    disabled ||
+                    isLoadingQuestions ||
+                    addableFilteredQuestions.length === 0
+                  }
+                  onClick={handleAddAllFromChapter}
+                  className="shrink-0 gap-2"
+                >
+                  <MaterialIcon name="playlist_add" size={16} />
+                  Add all ({addableFilteredQuestions.length})
+                </Button>
+              </div>
 
-          <SelectField
-            id="grand-test-chapter"
-            label="Chapter"
-            value={chapterRefId}
-            options={chapterOptions}
-            disabled={chapterSelectDisabled}
-            placeholder={
-              !subjectRefId
-                ? 'Select a subject first'
-                : isLoadingChapters
-                  ? 'Loading chapters...'
-                  : 'Select a chapter'
-            }
-            onChange={(value) => {
-              setChapterRefId(value)
-              setChapterQuestions([])
-              setPendingQuestionIds([])
-              setExpandedDetailId(null)
-              onClearFormError?.()
-            }}
-          />
-
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-label-sm font-semibold text-on-surface">
-                Chapter questions
-              </span>
-              {chapterRefId ? (
+              <div className="flex items-center justify-between gap-3">
                 <span className="text-label-sm text-on-surface-variant">
                   {isLoadingQuestions
-                    ? 'Loading...'
-                    : `${pendingQuestionIds.length} checked · ${chapterQuestions.length} available`}
+                    ? "Loading questions..."
+                    : `${filteredChapterQuestions.length} shown · ${addableFilteredQuestions.length} available to add`}
                 </span>
+              </div>
+
+              {isLoadingQuestions ? (
+                <p className="rounded-xl border border-border-subtle px-4 py-6 text-center text-body-md text-on-surface-variant">
+                  Loading questions...
+                </p>
+              ) : (
+                <GrandTestChapterQuestionList
+                  questions={filteredChapterQuestions}
+                  alreadyAddedIds={alreadyAddedIds}
+                  disabled={disabled}
+                  onAdd={handleAddQuestion}
+                  onView={handleViewChapterQuestion}
+                />
+              )}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-border-subtle px-4 py-8 text-center text-body-md text-on-surface-variant">
+              Select a subject and chapter to browse questions.
+            </p>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-card-title text-on-surface">Test basket</h3>
+                <p className="text-body-md text-on-surface-variant">
+                  {targetCount > 0
+                    ? `${selectedQuestions.length} of ${targetCount} questions selected`
+                    : `${selectedQuestions.length} questions selected`}
+                </p>
+              </div>
+              {selectedQuestions.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={disabled}
+                  onClick={handleClearAll}
+                  className="shrink-0 gap-1 px-3 py-1.5 text-label-sm"
+                >
+                  Clear all
+                </Button>
               ) : null}
             </div>
 
-            {!chapterRefId ? (
-              <p className="rounded-xl border border-dashed border-border-subtle px-4 py-6 text-center text-body-md text-on-surface-variant">
-                Select a subject and chapter to browse questions with full details.
-              </p>
-            ) : isLoadingQuestions ? (
-              <p className="rounded-xl border border-border-subtle px-4 py-6 text-center text-body-md text-on-surface-variant">
-                Loading questions...
-              </p>
-            ) : (
-              <GrandTestChapterQuestionList
-                questions={chapterQuestions}
-                selectedIds={pendingQuestionIds}
-                expandedDetailId={expandedDetailId}
-                alreadyAddedIds={alreadyAddedIds}
-                subjectRefId={subjectRefId}
-                chapterRefId={chapterRefId}
-                disabled={disabled}
-                listMaxHeightClass={listMaxHeightClass}
-                onToggleSelect={handleToggleSelect}
-                onToggleDetails={handleToggleDetails}
-              />
-            )}
-          </div>
+            <SelectedQuestionsList
+              questions={selectedQuestions}
+              disabled={disabled}
+              onRemove={handleRemoveQuestion}
+              onView={handleViewSelectedQuestion}
+              onEditCustomQuestion={handleEditCustomQuestion}
+            />
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={disabled || pendingQuestionIds.length === 0}
-              onClick={handleAddSelectedQuestions}
-              className="gap-2"
-            >
-              <MaterialIcon name="playlist_add" size={16} />
-              Add {pendingQuestionIds.length > 0 ? `${pendingQuestionIds.length} ` : ''}selected
-            </Button>
+            {selectedQuestionsError ? (
+              <p className="text-label-sm text-error-red" role="alert">
+                {selectedQuestionsError}
+              </p>
+            ) : null}
+
             <Button
               type="button"
               variant="outline"
@@ -407,30 +521,7 @@ export function GrandTestQuestionPickerStep({
               Add custom question
             </Button>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-label-sm font-semibold text-on-surface">
-              Selected questions
-            </span>
-            <span className="text-label-sm text-on-surface-variant">
-              Selected: {selectedQuestions.length}
-            </span>
-          </div>
-          <SelectedQuestionsList
-            questions={selectedQuestions}
-            disabled={disabled}
-            listMaxHeightClass={listMaxHeightClass}
-            onRemove={handleRemoveQuestion}
-            onEditCustomQuestion={handleEditCustomQuestion}
-          />
-          {selectedQuestionsError ? (
-            <p className="text-label-sm text-error-red" role="alert">
-              {selectedQuestionsError}
-            </p>
-          ) : null}
-        </div>
+        </section>
       </div>
 
       {loadError || formError ? (
@@ -439,14 +530,24 @@ export function GrandTestQuestionPickerStep({
         </p>
       ) : null}
 
+      <GrandTestQuestionDetailModal
+        isOpen={detailQuestion !== null}
+        question={detailQuestion}
+        onClose={() => setDetailQuestion(null)}
+      />
+
       {isCustomQuestionModalOpen &&
       (editingCustomQuestion || (subjectRefId && chapterRefId)) ? (
         <GrandTestCustomQuestionModal
           isOpen={isCustomQuestionModalOpen}
           subjectRefId={editingCustomQuestion?.subjectRefId ?? subjectRefId}
           chapterRefId={editingCustomQuestion?.chapterRefId ?? chapterRefId}
-          subjectName={editingCustomQuestion?.subjectName ?? selectedSubjectLabel}
-          chapterName={editingCustomQuestion?.chapterName ?? selectedChapterLabel}
+          subjectName={
+            editingCustomQuestion?.subjectName ?? selectedSubjectLabel
+          }
+          chapterName={
+            editingCustomQuestion?.chapterName ?? selectedChapterLabel
+          }
           mcqMid={selectedSubject?.mcqMid ?? null}
           disabled={disabled}
           editingQuestion={editingCustomQuestion}
@@ -456,5 +557,5 @@ export function GrandTestQuestionPickerStep({
         />
       ) : null}
     </div>
-  )
+  );
 }

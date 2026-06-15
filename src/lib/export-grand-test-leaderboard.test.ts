@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildGrandTestLeaderboardExportRows,
   buildGrandTestLeaderboardFilename,
+  buildGrandTestLeaderboardPdfTableData,
 } from '@/lib/export-grand-test-leaderboard'
 import type { GrandTest, GrandTestLeaderboardEntry } from '@/types/grand-test'
 
@@ -94,5 +95,52 @@ describe('export grand test leaderboard helpers', () => {
     expect(filename).toMatch(
       /^grand-test-leaderboard-test-abc123-\d{4}-\d{2}-\d{2}\.xlsx$/,
     )
+  })
+
+  it('builds pdf filenames with the same sanitization rules', () => {
+    const filename = buildGrandTestLeaderboardFilename(
+      createTest({ title: 'Example Test / June 2026!' }),
+      'pdf',
+    )
+
+    expect(filename).toMatch(
+      /^grand-test-leaderboard-example-test-june-2026-\d{4}-\d{2}-\d{2}\.pdf$/,
+    )
+  })
+
+  it('maps export rows to pdf table data', () => {
+    const rows = buildGrandTestLeaderboardExportRows([
+      createEntry({ rank: 2, name: '  ', userId: 'user-2' }),
+      createEntry({ rank: 1 }),
+    ])
+    const tableData = buildGrandTestLeaderboardPdfTableData(rows)
+
+    expect(tableData.head).toEqual([
+      [
+        'Rank',
+        'Student',
+        'User ID',
+        'Score',
+        'Correct',
+        'Incorrect',
+        'Skipped',
+        'Time Taken',
+        'Submitted At',
+      ],
+    ])
+    expect(tableData.body).toHaveLength(2)
+    expect(tableData.body[0]).toEqual([
+      '1',
+      'Jane Doe',
+      'user-1',
+      '10',
+      '8',
+      '1',
+      '1',
+      '1m 11s',
+      rows[0]['Submitted At'],
+    ])
+    expect(tableData.body[1][0]).toBe('2')
+    expect(tableData.body[1][1]).toBe('user-2')
   })
 })

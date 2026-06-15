@@ -64,7 +64,7 @@ export function DateTimeFieldGroup({
       <div
         role="group"
         aria-labelledby={`${id}-label`}
-        className="grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]"
+        className="flex flex-col gap-3"
       >
         <input
           id={dateInputId}

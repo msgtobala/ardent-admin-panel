@@ -124,9 +124,9 @@ export interface GrandTestEditFormData {
 }
 
 export const GRAND_TEST_FORM_STEPS = [
-  { id: 1, label: 'Basic details' },
-  { id: 2, label: 'Questions' },
-  { id: 3, label: 'Preview' },
+  { id: 1, label: 'Basic details', description: 'Name, schedule, and scoring' },
+  { id: 2, label: 'Questions', description: 'Build your question set' },
+  { id: 3, label: 'Preview', description: 'Review before saving' },
 ] as const
 
 export type GrandTestFormStep = (typeof GRAND_TEST_FORM_STEPS)[number]['id']

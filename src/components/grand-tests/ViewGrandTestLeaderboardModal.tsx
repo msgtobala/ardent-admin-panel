@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { formatDisplayDate } from '@/lib/format-display-date'
-import { exportGrandTestLeaderboardExcel } from '@/lib/export-grand-test-leaderboard'
+import {
+  exportGrandTestLeaderboardExcel,
+  exportGrandTestLeaderboardPdf,
+} from '@/lib/export-grand-test-leaderboard'
 import {
   fetchGrandTestLeaderboard,
   formatDurationSeconds,
@@ -202,11 +205,12 @@ export function ViewGrandTestLeaderboardModal({
   const testLabel = test.title.trim() || test.id
   const testId = test.id
   const showPendingMessage = !test.isLeaderboardPublished
-  const showEmptyMessage = test.isLeaderboardPublished && sortedEntries.length === 0
+  const showEmptyMessage =
+    test.isLeaderboardPublished && !isLoading && !error && sortedEntries.length === 0
   const showTable =
-    test.isLeaderboardPublished && !error && !showEmptyMessage && !isLoading
+    test.isLeaderboardPublished && !error && (isLoading || sortedEntries.length > 0)
   const showPagination = showTable || (test.isLeaderboardPublished && isLoading)
-  const canExportExcel =
+  const canExport =
     test.isLeaderboardPublished && !isLoading && !error && sortedEntries.length > 0
 
   const placeholderRowCount =
@@ -227,8 +231,13 @@ export function ViewGrandTestLeaderboardModal({
   }
 
   function handleExportExcel() {
-    if (!canExportExcel || !test) return
+    if (!canExport || !test) return
     exportGrandTestLeaderboardExcel(test, sortedEntries)
+  }
+
+  function handleExportPdf() {
+    if (!canExport || !test) return
+    exportGrandTestLeaderboardPdf(test, sortedEntries)
   }
 
   return (
@@ -260,8 +269,11 @@ export function ViewGrandTestLeaderboardModal({
             <div className="flex flex-wrap items-center gap-2">
               <LeaderboardPublishedBadge isPublished={test.isLeaderboardPublished} />
               <span className="text-label-sm text-on-surface-variant">
-                {sortedEntries.length}{' '}
-                {sortedEntries.length === 1 ? 'participant' : 'participants'}
+                {isLoading && test.isLeaderboardPublished
+                  ? 'Loading participants...'
+                  : `${sortedEntries.length} ${
+                      sortedEntries.length === 1 ? 'participant' : 'participants'
+                    }`}
                 {participantCountMismatch
                   ? ` (test document reports ${test.totalParticipants})`
                   : ''}
@@ -345,17 +357,30 @@ export function ViewGrandTestLeaderboardModal({
                   ? 'Loading participants...'
                   : `Showing ${showingFrom}–${showingTo} of ${sortedEntries.length}`}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!canExportExcel}
-                title={canExportExcel ? 'Export full leaderboard to Excel' : 'No data to export'}
-                onClick={handleExportExcel}
-                className="gap-2"
-              >
-                <MaterialIcon name="download" size={18} />
-                Export Excel
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canExport}
+                  title={canExport ? 'Export full leaderboard to PDF' : 'No data to export'}
+                  onClick={handleExportPdf}
+                  className="gap-2"
+                >
+                  <MaterialIcon name="picture_as_pdf" size={18} />
+                  Export PDF
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canExport}
+                  title={canExport ? 'Export full leaderboard to Excel' : 'No data to export'}
+                  onClick={handleExportExcel}
+                  className="gap-2"
+                >
+                  <MaterialIcon name="download" size={18} />
+                  Export Excel
+                </Button>
+              </div>
             </div>
             <TablePagination
               currentPage={currentPage}

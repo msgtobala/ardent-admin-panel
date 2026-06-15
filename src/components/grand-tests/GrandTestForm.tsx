@@ -13,6 +13,7 @@ import { GrandTestStepIndicator } from './GrandTestStepIndicator'
 import { GrandTestBasicDetailsStep } from './add-grand-test/GrandTestBasicDetailsStep'
 import { GrandTestPreviewStep } from './add-grand-test/GrandTestPreviewStep'
 import { GrandTestQuestionPickerStep } from './add-grand-test/GrandTestQuestionPickerStep'
+import { GrandTestQuestionProgressHint } from './add-grand-test/GrandTestQuestionProgressHint'
 
 type GrandTestFormMode = 'add' | 'edit'
 
@@ -102,6 +103,29 @@ export function GrandTestForm({
 
   const saveLabel = mode === 'edit' ? 'Update' : 'Save'
   const savingLabel = mode === 'edit' ? 'Updating...' : 'Saving...'
+
+  const isStep2NextDisabled = useMemo(() => {
+    if (currentStep !== 2) return false
+
+    const durationValid =
+      duration.trim().length > 0 &&
+      Number.isFinite(parsedDuration) &&
+      parsedDuration > 0
+    const targetValid =
+      questions.trim().length > 0 &&
+      Number.isFinite(parsedQuestions) &&
+      parsedQuestions > 0
+    const countsMatch = selectedQuestions.length === parsedQuestions
+
+    return !durationValid || !targetValid || !countsMatch || selectedQuestions.length === 0
+  }, [
+    currentStep,
+    duration,
+    parsedDuration,
+    questions,
+    parsedQuestions,
+    selectedQuestions.length,
+  ])
 
   function validateStep1(): boolean {
     let valid = true
@@ -314,27 +338,28 @@ export function GrandTestForm({
         ) : null}
 
         {currentStep === 2 ? (
-          <GrandTestQuestionPickerStep
-            duration={duration}
-            questions={questions}
-            selectedQuestions={selectedQuestions}
-            disabled={isSubmitting}
-            durationError={durationError}
-            questionsError={questionsError}
-            selectedQuestionsError={selectedQuestionsError}
-            formError={formError}
-            layout="page"
-            onDurationChange={(value) => {
-              setDuration(value)
-              if (durationError) setDurationError(undefined)
-            }}
-            onQuestionsChange={(value) => {
-              setQuestions(value)
-              if (questionsError) setQuestionsError(undefined)
-            }}
-            onSelectedQuestionsChange={setSelectedQuestions}
-            onClearFormError={() => setFormError(undefined)}
-          />
+          <div className="mx-auto w-full max-w-6xl">
+            <GrandTestQuestionPickerStep
+              duration={duration}
+              questions={questions}
+              selectedQuestions={selectedQuestions}
+              disabled={isSubmitting}
+              durationError={durationError}
+              questionsError={questionsError}
+              selectedQuestionsError={selectedQuestionsError}
+              formError={formError}
+              onDurationChange={(value) => {
+                setDuration(value)
+                if (durationError) setDurationError(undefined)
+              }}
+              onQuestionsChange={(value) => {
+                setQuestions(value)
+                if (questionsError) setQuestionsError(undefined)
+              }}
+              onSelectedQuestionsChange={setSelectedQuestions}
+              onClearFormError={() => setFormError(undefined)}
+            />
+          </div>
         ) : null}
 
         {currentStep === 3 ? (
@@ -362,7 +387,7 @@ export function GrandTestForm({
       </div>
 
       <div className="flex items-center justify-between border-t border-border-subtle bg-surface-container-low px-gutter py-4">
-        <div>
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           {currentStep > 1 ? (
             <Button
               type="button"
@@ -373,8 +398,19 @@ export function GrandTestForm({
               Back
             </Button>
           ) : null}
+          {currentStep === 2 ? (
+            <GrandTestQuestionProgressHint
+              selectedCount={selectedQuestions.length}
+              targetCount={
+                Number.isFinite(parsedQuestions) && parsedQuestions > 0
+                  ? parsedQuestions
+                  : 0
+              }
+              duration={duration}
+            />
+          ) : null}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -384,7 +420,11 @@ export function GrandTestForm({
             Cancel
           </Button>
           {currentStep < 3 ? (
-            <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+            <Button
+              type="button"
+              onClick={handleNext}
+              disabled={isSubmitting || isStep2NextDisabled}
+            >
               Next
             </Button>
           ) : (

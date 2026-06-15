@@ -1,3 +1,5 @@
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 
 import { formatDisplayDate } from '@/lib/format-display-date'
@@ -19,6 +21,20 @@ export interface GrandTestLeaderboardExportRow {
   'Submitted At': string
 }
 
+export type GrandTestLeaderboardExportExtension = 'xlsx' | 'pdf'
+
+export const GRAND_TEST_LEADERBOARD_PDF_COLUMNS = [
+  'Rank',
+  'Student',
+  'User ID',
+  'Score',
+  'Correct',
+  'Incorrect',
+  'Skipped',
+  'Time Taken',
+  'Submitted At',
+] as const satisfies ReadonlyArray<keyof GrandTestLeaderboardExportRow>
+
 function formatSubmittedAt(submittedAt: Date): string {
   return submittedAt.getTime() > 0 ? formatDisplayDate(submittedAt) : '—'
 }
@@ -39,6 +55,17 @@ export function buildGrandTestLeaderboardExportRows(
   }))
 }
 
+export function buildGrandTestLeaderboardPdfTableData(
+  rows: GrandTestLeaderboardExportRow[],
+): { head: string[][]; body: string[][] } {
+  return {
+    head: [GRAND_TEST_LEADERBOARD_PDF_COLUMNS.map(String)],
+    body: rows.map((row) =>
+      GRAND_TEST_LEADERBOARD_PDF_COLUMNS.map((column) => String(row[column])),
+    ),
+  }
+}
+
 function sanitizeFilenameSegment(value: string): string {
   const trimmed = value.trim()
   if (!trimmed) return 'untitled'
@@ -50,7 +77,10 @@ function sanitizeFilenameSegment(value: string): string {
     .slice(0, 60)
 }
 
-export function buildGrandTestLeaderboardFilename(test: GrandTest): string {
+export function buildGrandTestLeaderboardFilename(
+  test: GrandTest,
+  extension: GrandTestLeaderboardExportExtension = 'xlsx',
+): string {
   const titleSegment = sanitizeFilenameSegment(test.title || test.id)
   const dateSegment = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
@@ -58,7 +88,7 @@ export function buildGrandTestLeaderboardFilename(test: GrandTest): string {
     day: '2-digit',
   }).format(new Date())
 
-  return `grand-test-leaderboard-${titleSegment}-${dateSegment}.xlsx`
+  return `grand-test-leaderboard-${titleSegment}-${dateSegment}.${extension}`
 }
 
 export function exportGrandTestLeaderboardExcel(
@@ -82,5 +112,51 @@ export function exportGrandTestLeaderboardExcel(
 
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Leaderboard')
-  XLSX.writeFile(workbook, buildGrandTestLeaderboardFilename(test))
+  XLSX.writeFile(workbook, buildGrandTestLeaderboardFilename(test, 'xlsx'))
+}
+
+export function exportGrandTestLeaderboardPdf(
+  test: GrandTest,
+  entries: GrandTestLeaderboardEntry[],
+): void {
+  const rows = buildGrandTestLeaderboardExportRows(entries)
+  const { head, body } = buildGrandTestLeaderboardPdfTableData(rows)
+  const testLabel = test.title.trim() || test.id
+  const exportedAt = formatDisplayDate(new Date())
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+
+  doc.setFontSize(16)
+  doc.text('Grand Test Leaderboard', 40, 40)
+
+  doc.setFontSize(10)
+  doc.text(`Test: ${testLabel}`, 40, 58)
+  doc.text(`Exported: ${exportedAt}`, 40, 72)
+  doc.text(`Participants: ${rows.length}`, 40, 86)
+
+  autoTable(doc, {
+    head,
+    body,
+    startY: 100,
+    styles: {
+      fontSize: 8,
+      cellPadding: 4,
+    },
+    headStyles: {
+      fillColor: [255, 73, 0],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+    },
+    alternateRowStyles: {
+      fillColor: [250, 242, 240],
+    },
+    columnStyles: {
+      0: { cellWidth: 36 },
+      1: { cellWidth: 110 },
+      2: { cellWidth: 90 },
+      8: { cellWidth: 100 },
+    },
+  })
+
+  doc.save(buildGrandTestLeaderboardFilename(test, 'pdf'))
 }

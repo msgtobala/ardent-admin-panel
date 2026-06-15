@@ -34,14 +34,21 @@ export function GrandTestStepIndicator({ currentStep }: GrandTestStepIndicatorPr
                     step.id
                   )}
                 </span>
-                <span
-                  className={[
-                    'truncate text-label-sm font-medium',
-                    isCurrent ? 'text-on-surface' : 'text-on-surface-variant',
-                  ].join(' ')}
-                >
-                  {step.label}
-                </span>
+                <div className="min-w-0">
+                  <span
+                    className={[
+                      'block truncate text-label-sm font-medium',
+                      isCurrent ? 'text-on-surface' : 'text-on-surface-variant',
+                    ].join(' ')}
+                  >
+                    {step.label}
+                  </span>
+                  {'description' in step && step.description ? (
+                    <span className="hidden truncate text-caption text-on-surface-variant md:block">
+                      {step.description}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               {!isLast ? (
                 <div

@@ -28,6 +28,9 @@ type SelectFieldProps = {
   placeholder?: string
   /** Hides the visible label and uses it as the trigger aria-label instead. */
   compact?: boolean
+  /** Borderless trigger for use inside composite controls (e.g. time picker). */
+  embedded?: boolean
+  className?: string
   /** Where the menu opens relative to the trigger. `auto` flips up when space below is tight. */
   menuPlacement?: SelectMenuPlacement
 }
@@ -100,6 +103,9 @@ function resolveMenuPlacement(
 const triggerClasses =
   'flex h-[38px] w-full items-center justify-between gap-2 rounded-input border border-border-subtle bg-surface-white px-[13px] py-[10px] text-left text-body-md text-on-surface shadow-tier-1 focus:border-primary-action focus:outline-none focus:ring-2 focus:ring-focus-ring'
 
+const embeddedTriggerClasses =
+  'flex h-full w-full min-w-0 items-center justify-between gap-1 border-0 bg-transparent px-2 py-0 text-left text-body-md text-on-surface shadow-none focus:border-0 focus:outline-none focus:ring-0'
+
 export function SelectField({
   label,
   id,
@@ -111,6 +117,8 @@ export function SelectField({
   required,
   placeholder = 'Select an option',
   compact = false,
+  embedded = false,
+  className,
   menuPlacement = 'bottom',
 }: SelectFieldProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -255,9 +263,16 @@ export function SelectField({
   return (
     <div
       ref={containerRef}
-      className={['relative flex w-full flex-col', compact ? 'gap-0' : 'gap-1'].join(' ')}
+      className={[
+        'relative flex flex-col',
+        embedded ? 'h-full min-w-0' : 'w-full',
+        compact || embedded ? 'gap-0' : 'gap-1',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
-      {compact ? null : (
+      {compact || embedded ? null : (
         <label htmlFor={id} className="text-label-sm text-on-surface">
           {label}
           {required ? (
@@ -273,7 +288,7 @@ export function SelectField({
         id={id}
         type="button"
         role="combobox"
-        aria-label={compact ? label : undefined}
+        aria-label={compact || embedded ? label : undefined}
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -283,19 +298,24 @@ export function SelectField({
         onClick={() => (isOpen ? handleClose() : handleOpen())}
         onKeyDown={handleTriggerKeyDown}
         className={[
-          triggerClasses,
+          embedded ? embeddedTriggerClasses : triggerClasses,
           error ? 'border-error-red' : '',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <span className={selectedOption ? 'text-on-surface' : 'text-on-surface-variant'}>
+        <span
+          className={[
+            'min-w-0 truncate',
+            selectedOption ? 'text-on-surface' : 'text-on-surface-variant',
+          ].join(' ')}
+        >
           {displayLabel}
         </span>
         <MaterialIcon
           name="expand_more"
-          size={20}
+          size={embedded ? 16 : 20}
           className={[
             'shrink-0 text-on-surface-variant transition-transform duration-200',
             isOpen ? 'rotate-180' : '',

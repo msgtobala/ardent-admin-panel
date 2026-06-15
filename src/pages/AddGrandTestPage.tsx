@@ -23,7 +23,7 @@ export default function AddGrandTestPage() {
           <MaterialIcon name="arrow_back" size={18} />
           Back to Active Tests
         </Link>
-        <div className="flex max-w-3xl flex-col gap-2">
+        <div className="flex max-w-6xl flex-col gap-2">
           <h1 className="text-section-title text-on-surface">Add New Test</h1>
           <p className="text-body-md text-on-surface-variant">
             Create a grand test with basic details, qbank questions, and a final preview
