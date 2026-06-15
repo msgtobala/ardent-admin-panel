@@ -33,6 +33,7 @@ const emptyFormState = {
   correctMark: '1',
   negativeMark: '-1',
   duration: '',
+  questions: '',
   selectedQuestions: [] as SelectedGrandTestQuestion[],
 }
 
@@ -48,6 +49,7 @@ function resolveInitialState(initialData?: GrandTestEditFormData) {
     correctMark: initialData.correctMark,
     negativeMark: initialData.negativeMark,
     duration: initialData.duration,
+    questions: initialData.questions,
     selectedQuestions: initialData.selectedQuestions,
   }
 }
@@ -70,6 +72,7 @@ export function GrandTestForm({
   const [correctMark, setCorrectMark] = useState(initialState.correctMark)
   const [negativeMark, setNegativeMark] = useState(initialState.negativeMark)
   const [duration, setDuration] = useState(initialState.duration)
+  const [questions, setQuestions] = useState(initialState.questions)
   const [selectedQuestions, setSelectedQuestions] = useState<SelectedGrandTestQuestion[]>(
     initialState.selectedQuestions,
   )
@@ -79,6 +82,7 @@ export function GrandTestForm({
   const [correctMarkError, setCorrectMarkError] = useState<string | undefined>()
   const [negativeMarkError, setNegativeMarkError] = useState<string | undefined>()
   const [durationError, setDurationError] = useState<string | undefined>()
+  const [questionsError, setQuestionsError] = useState<string | undefined>()
   const [selectedQuestionsError, setSelectedQuestionsError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -92,6 +96,7 @@ export function GrandTestForm({
     [testExpiryValue],
   )
   const parsedDuration = useMemo(() => Number(duration), [duration])
+  const parsedQuestions = useMemo(() => Number(questions), [questions])
   const parsedCorrectMark = useMemo(() => Number(correctMark), [correctMark])
   const parsedNegativeMark = useMemo(() => Number(negativeMark), [negativeMark])
 
@@ -165,6 +170,18 @@ export function GrandTestForm({
       setDurationError(undefined)
     }
 
+    if (!questions.trim() || Number.isNaN(parsedQuestions) || parsedQuestions <= 0) {
+      setQuestionsError('Number of questions must be greater than 0')
+      valid = false
+    } else if (parsedQuestions !== selectedQuestions.length) {
+      setQuestionsError(
+        `Number of questions (${parsedQuestions}) must match selected questions (${selectedQuestions.length})`,
+      )
+      valid = false
+    } else {
+      setQuestionsError(undefined)
+    }
+
     if (selectedQuestions.length === 0) {
       setSelectedQuestionsError('Add at least one question to the test')
       valid = false
@@ -218,6 +235,7 @@ export function GrandTestForm({
       testStart: parsedTestStart,
       testExpiry: parsedTestExpiry,
       duration: parsedDuration,
+      questions: parsedQuestions,
       correctMark: parsedCorrectMark,
       negativeMark: parsedNegativeMark,
       isFree,
@@ -298,15 +316,21 @@ export function GrandTestForm({
         {currentStep === 2 ? (
           <GrandTestQuestionPickerStep
             duration={duration}
+            questions={questions}
             selectedQuestions={selectedQuestions}
             disabled={isSubmitting}
             durationError={durationError}
+            questionsError={questionsError}
             selectedQuestionsError={selectedQuestionsError}
             formError={formError}
             layout="page"
             onDurationChange={(value) => {
               setDuration(value)
               if (durationError) setDurationError(undefined)
+            }}
+            onQuestionsChange={(value) => {
+              setQuestions(value)
+              if (questionsError) setQuestionsError(undefined)
             }}
             onSelectedQuestionsChange={setSelectedQuestions}
             onClearFormError={() => setFormError(undefined)}
@@ -320,6 +344,7 @@ export function GrandTestForm({
               testStart={parsedTestStart}
               testExpiry={parsedTestExpiry}
               duration={parsedDuration}
+              questionsCount={parsedQuestions}
               isFree={isFree}
               isActive={isActive}
               correctMark={parsedCorrectMark}

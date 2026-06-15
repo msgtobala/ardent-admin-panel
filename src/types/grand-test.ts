@@ -102,6 +102,7 @@ export interface CreateGrandTestInput {
   testStart: Date
   testExpiry: Date
   duration: number
+  questions: number
   correctMark: number
   negativeMark: number
   isFree: boolean
@@ -118,6 +119,7 @@ export interface GrandTestEditFormData {
   correctMark: string
   negativeMark: string
   duration: string
+  questions: string
   selectedQuestions: SelectedGrandTestQuestion[]
 }
 
@@ -128,3 +130,17 @@ export const GRAND_TEST_FORM_STEPS = [
 ] as const
 
 export type GrandTestFormStep = (typeof GRAND_TEST_FORM_STEPS)[number]['id']
+
+export interface GrandTestLeaderboardEntry {
+  userId: string
+  name: string
+  profileImageUrl: string
+  rank: number
+  score: number
+  correctCount: number
+  incorrectCount: number
+  skippedCount: number
+  timeTakenSecs: number
+  totalParticipants: number
+  submittedAt: Date
+}

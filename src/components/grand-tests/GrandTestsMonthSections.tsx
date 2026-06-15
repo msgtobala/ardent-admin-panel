@@ -14,6 +14,8 @@ interface GrandTestsMonthSectionsProps {
   onRetry: () => void
   showEdit?: boolean
   onEdit?: (test: GrandTest) => void
+  showLeaderboard?: boolean
+  onViewLeaderboard?: (test: GrandTest) => void
 }
 
 export function GrandTestsMonthSections({
@@ -25,6 +27,8 @@ export function GrandTestsMonthSections({
   onRetry,
   showEdit = false,
   onEdit,
+  showLeaderboard = false,
+  onViewLeaderboard,
 }: GrandTestsMonthSectionsProps) {
   if (error) {
     return <TableErrorState message={error} onRetry={onRetry} />
@@ -55,6 +59,8 @@ export function GrandTestsMonthSections({
           emptyMessage={monthEmptyMessage}
           showEdit={showEdit}
           onEdit={onEdit}
+          showLeaderboard={showLeaderboard}
+          onViewLeaderboard={onViewLeaderboard}
         />
       ))}
     </div>

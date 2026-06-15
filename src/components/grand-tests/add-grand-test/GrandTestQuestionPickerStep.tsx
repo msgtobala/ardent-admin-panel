@@ -17,26 +17,32 @@ import { SelectedQuestionsList } from './SelectedQuestionsList'
 
 interface GrandTestQuestionPickerStepProps {
   duration: string
+  questions: string
   selectedQuestions: SelectedGrandTestQuestion[]
   disabled?: boolean
   durationError?: string
+  questionsError?: string
   selectedQuestionsError?: string
   formError?: string
   layout?: 'modal' | 'page'
   onDurationChange: (value: string) => void
+  onQuestionsChange: (value: string) => void
   onSelectedQuestionsChange: (questions: SelectedGrandTestQuestion[]) => void
   onClearFormError?: () => void
 }
 
 export function GrandTestQuestionPickerStep({
   duration,
+  questions,
   selectedQuestions,
   disabled = false,
   durationError,
+  questionsError,
   selectedQuestionsError,
   formError,
   layout = 'page',
   onDurationChange,
+  onQuestionsChange,
   onSelectedQuestionsChange,
   onClearFormError,
 }: GrandTestQuestionPickerStepProps) {
@@ -99,8 +105,6 @@ export function GrandTestQuestionPickerStep({
 
   useEffect(() => {
     if (!subjectRefId) {
-      setChapterOptions([])
-      setChapterRefId('')
       return
     }
 
@@ -138,9 +142,6 @@ export function GrandTestQuestionPickerStep({
 
   useEffect(() => {
     if (!subjectRefId || !chapterRefId) {
-      setChapterQuestions([])
-      setPendingQuestionIds([])
-      setExpandedDetailId(null)
       return
     }
 
@@ -279,18 +280,32 @@ export function GrandTestQuestionPickerStep({
     <div className="flex flex-col gap-gutter">
       <div className="grid gap-gutter lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="flex flex-col gap-gutter">
-          <TextField
-            id="grand-test-duration"
-            label="Duration (minutes)"
-            type="number"
-            min={1}
-            required
-            value={duration}
-            disabled={disabled}
-            error={durationError}
-            placeholder="e.g. 120"
-            onChange={(event) => onDurationChange(event.target.value)}
-          />
+          <div className="grid gap-gutter sm:grid-cols-2">
+            <TextField
+              id="grand-test-duration"
+              label="Duration (minutes)"
+              type="number"
+              min={1}
+              required
+              value={duration}
+              disabled={disabled}
+              error={durationError}
+              placeholder="e.g. 120"
+              onChange={(event) => onDurationChange(event.target.value)}
+            />
+            <TextField
+              id="grand-test-questions"
+              label="Number of Questions"
+              type="number"
+              min={1}
+              required
+              value={questions}
+              disabled={disabled}
+              error={questionsError}
+              placeholder="e.g. 50"
+              onChange={(event) => onQuestionsChange(event.target.value)}
+            />
+          </div>
 
           <SelectField
             id="grand-test-subject"
@@ -302,6 +317,8 @@ export function GrandTestQuestionPickerStep({
             onChange={(value) => {
               setSubjectRefId(value)
               setChapterRefId('')
+              setChapterOptions([])
+              setChapterQuestions([])
               setPendingQuestionIds([])
               setExpandedDetailId(null)
               onClearFormError?.()
@@ -323,6 +340,7 @@ export function GrandTestQuestionPickerStep({
             }
             onChange={(value) => {
               setChapterRefId(value)
+              setChapterQuestions([])
               setPendingQuestionIds([])
               setExpandedDetailId(null)
               onClearFormError?.()
@@ -397,7 +415,7 @@ export function GrandTestQuestionPickerStep({
               Selected questions
             </span>
             <span className="text-label-sm text-on-surface-variant">
-              {selectedQuestions.length} selected
+              Selected: {selectedQuestions.length}
             </span>
           </div>
           <SelectedQuestionsList

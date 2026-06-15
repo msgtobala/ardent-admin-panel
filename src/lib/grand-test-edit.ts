@@ -196,6 +196,7 @@ export async function fetchGrandTestForEdit(
     correctMark: String(test.correctMark),
     negativeMark: String(test.negativeMark),
     duration: String(test.duration),
+    questions: String(test.questions),
     selectedQuestions,
   }
 }
@@ -206,6 +207,12 @@ export async function updateGrandTest(
 ): Promise<void> {
   if (input.selectedQuestions.length === 0) {
     throw new Error('At least one question is required')
+  }
+
+  if (input.questions !== input.selectedQuestions.length) {
+    throw new Error(
+      `Number of questions (${input.questions}) must match selected questions (${input.selectedQuestions.length})`,
+    )
   }
 
   const testRef = doc(db, GRAND_TESTS_COLLECTION, testId)
@@ -221,7 +228,7 @@ export async function updateGrandTest(
     testStart: Timestamp.fromDate(input.testStart),
     testExpiry: Timestamp.fromDate(input.testExpiry),
     duration: input.duration,
-    questions: input.selectedQuestions.length,
+    questions: input.questions,
     correctMark: input.correctMark,
     negativeMark: input.negativeMark,
     isFree: input.isFree,

@@ -15,6 +15,12 @@ export async function createGrandTest(input: CreateGrandTestInput): Promise<stri
     throw new Error('At least one question is required')
   }
 
+  if (input.questions !== input.selectedQuestions.length) {
+    throw new Error(
+      `Number of questions (${input.questions}) must match selected questions (${input.selectedQuestions.length})`,
+    )
+  }
+
   const testRef = doc(collection(db, GRAND_TESTS_COLLECTION))
   const testId = testRef.id
   const batch = writeBatch(db)
@@ -25,7 +31,7 @@ export async function createGrandTest(input: CreateGrandTestInput): Promise<stri
     testStart: Timestamp.fromDate(input.testStart),
     testExpiry: Timestamp.fromDate(input.testExpiry),
     duration: input.duration,
-    questions: input.selectedQuestions.length,
+    questions: input.questions,
     correctMark: input.correctMark,
     negativeMark: input.negativeMark,
     isFree: input.isFree,

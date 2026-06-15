@@ -7,6 +7,8 @@ interface GrandTestCardProps {
   test: GrandTest
   showEdit?: boolean
   onEdit?: (test: GrandTest) => void
+  showLeaderboard?: boolean
+  onViewLeaderboard?: (test: GrandTest) => void
 }
 
 interface DetailFieldProps {
@@ -41,7 +43,13 @@ function FreeAccessBadge({ isFree }: { isFree: boolean }) {
 const editButtonClassName =
   'cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
 
-export function GrandTestCard({ test, showEdit = false, onEdit }: GrandTestCardProps) {
+export function GrandTestCard({
+  test,
+  showEdit = false,
+  onEdit,
+  showLeaderboard = false,
+  onViewLeaderboard,
+}: GrandTestCardProps) {
   return (
     <article className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface-white shadow-tier-1">
       <div className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-4">
@@ -76,12 +84,31 @@ export function GrandTestCard({ test, showEdit = false, onEdit }: GrandTestCardP
       <div className="flex flex-1 flex-col gap-4 px-4 py-4">
         <DetailField label="Start Date" value={formatDisplayDate(test.testStart)} />
         <DetailField label="End Date" value={formatDisplayDate(test.testExpiry)} />
-        <div className="mt-auto flex flex-wrap items-center gap-2">
+        <DetailField label="No. of Questions" value={String(test.questions)} />
+        {showLeaderboard ? (
+          <DetailField
+            label="Participants"
+            value={String(test.totalParticipants)}
+          />
+        ) : null}
+        <div className="mt-auto flex flex-col gap-3">
+          {showLeaderboard && onViewLeaderboard ? (
+            <button
+              type="button"
+              onClick={() => onViewLeaderboard(test)}
+              className="inline-flex h-[34px] w-full cursor-pointer items-center justify-center gap-2 rounded-button border border-border-subtle bg-surface-white px-4 py-2 text-body-md font-medium text-on-surface transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            >
+              <MaterialIcon name="leaderboard" size={18} className="text-primary" />
+              View Leaderboard
+            </button>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
           <FreeAccessBadge isFree={test.isFree} />
           <GrandTestStatusBadge
             testStart={test.testStart}
             testExpiry={test.testExpiry}
           />
+          </div>
         </div>
       </div>
     </article>
