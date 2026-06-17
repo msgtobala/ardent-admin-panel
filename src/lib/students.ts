@@ -4,6 +4,7 @@ import {
   doc,
   getCountFromServer,
   getDoc,
+  getDocFromServer,
   getDocs,
   limit,
   orderBy,
@@ -81,6 +82,44 @@ function parsePlansSnapshot(
   return plans
 }
 
+function parseHasDeviceDetails(deviceDetails: StudentDocument['deviceDetails']): boolean {
+  if (deviceDetails == null || typeof deviceDetails !== 'object' || Array.isArray(deviceDetails)) {
+    return false
+  }
+
+  const record = deviceDetails as Record<string, unknown>
+
+  return (
+    typeof record.deviceId === 'string' ||
+    typeof record.deviceName === 'string' ||
+    typeof record.platform === 'string' ||
+    record.loginTimestamp != null
+  )
+}
+
+export async function resolveStudentsDeviceDetails(students: Student[]): Promise<Student[]> {
+  if (students.length === 0) return students
+
+  const snapshots = await Promise.all(
+    students.map((student) =>
+      getDocFromServer(doc(db, STUDENTS_COLLECTION, student.uid)),
+    ),
+  )
+
+  return students.map((student, index) => {
+    const snapshot = snapshots[index]
+    if (!snapshot?.exists()) {
+      return { ...student, hasDeviceDetails: false }
+    }
+
+    const data = snapshot.data() as StudentDocument
+    return {
+      ...student,
+      hasDeviceDetails: parseHasDeviceDetails(data.deviceDetails),
+    }
+  })
+}
+
 export function mapStudentDoc(snapshot: QueryDocumentSnapshot<DocumentData>): Student {
   const data = snapshot.data() as StudentDocument
 
@@ -93,6 +132,7 @@ export function mapStudentDoc(snapshot: QueryDocumentSnapshot<DocumentData>): St
     authenticationMethod: data.authenticationMethod?.trim() ?? '',
     planName: parsePlanName(data.plans),
     isActiveUser: data.isActiveUser === true,
+    hasDeviceDetails: parseHasDeviceDetails(data.deviceDetails),
   }
 }
 
@@ -142,6 +182,11 @@ export async function updateStudent(uid: string, input: UpdateStudentInput): Pro
   }
 
   await updateDoc(docRef, payload)
+}
+
+export async function resetStudentDeviceDetails(uid: string): Promise<void> {
+  const docRef = doc(db, STUDENTS_COLLECTION, uid)
+  await updateDoc(docRef, { deviceDetails: null })
 }
 
 export interface FetchStudentsPageResult {

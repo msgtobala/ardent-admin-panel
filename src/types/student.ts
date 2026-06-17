@@ -22,6 +22,7 @@ export interface Student {
   authenticationMethod: string
   planName: string
   isActiveUser: boolean
+  hasDeviceDetails: boolean
 }
 
 export interface StudentDetail extends Student {
@@ -44,6 +45,7 @@ export interface StudentDocument {
     academicYear?: string
   }
   plans?: StudentPlansSnapshot
+  deviceDetails?: unknown
 }
 
 export type StudentSortField = 'name' | 'planName'

@@ -6,6 +6,7 @@ import {
   STUDENTS_PAGE_SIZE,
   fetchStudentsPage,
   getStudentsCount,
+  resolveStudentsDeviceDetails,
 } from '@/lib/students'
 import type { StudentSortField, SortDirection } from '@/types/student'
 
@@ -73,7 +74,13 @@ export function useStudents() {
 
           if (!isActive()) return
 
-          setStudents(result.students)
+          const studentsWithDeviceDetails = await resolveStudentsDeviceDetails(
+            result.students,
+          )
+
+          if (!isActive()) return
+
+          setStudents(studentsWithDeviceDetails)
           setTotalCount(result.totalCount)
           setHasNext(result.hasNext)
           setHasPrevious(result.hasPrevious)
@@ -95,7 +102,13 @@ export function useStudents() {
 
         if (!isActive()) return
 
-        setStudents(pageResult.students)
+        const studentsWithDeviceDetails = await resolveStudentsDeviceDetails(
+          pageResult.students,
+        )
+
+        if (!isActive()) return
+
+        setStudents(studentsWithDeviceDetails)
         if (count !== undefined) setTotalCount(count)
         setHasNext(pageResult.hasMore)
         setHasPrevious(pageIndex > 0)

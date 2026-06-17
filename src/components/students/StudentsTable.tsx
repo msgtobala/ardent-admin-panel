@@ -36,12 +36,16 @@ interface StudentsTableProps {
   onPrevious: () => void
   onRetry: () => void
   onEdit: (student: Student) => void
+  onResetDevice: (student: Student) => void
 }
 
-const STUDENT_COLUMN_WIDTHS = [undefined, 'w-[220px]', 'w-[140px]', undefined, 'w-[148px]']
+const STUDENT_COLUMN_WIDTHS = [undefined, 'w-[220px]', 'w-[140px]', undefined, 'w-[188px]']
 
 const actionButtonClassName =
   'cursor-pointer rounded-lg p-2 transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
+
+const disabledActionButtonClassName =
+  'cursor-not-allowed rounded-lg p-2 opacity-40'
 
 function StudentsTableSkeletonRows() {
   return Array.from({ length: STUDENTS_PAGE_SIZE }).map((_, index) => (
@@ -68,9 +72,11 @@ function StudentsTableSkeletonRows() {
 function StudentRow({
   student,
   onEdit,
+  onResetDevice,
 }: {
   student: Student
   onEdit: (student: Student) => void
+  onResetDevice: (student: Student) => void
 }) {
   const displayName = getStudentDisplayName(student)
   const authMethod = getAuthenticationMethodDisplay(student.authenticationMethod)
@@ -113,6 +119,28 @@ function StudentRow({
               className="text-on-surface-variant"
             />
           </button>
+          <button
+            type="button"
+            aria-label={`Reset device for ${displayName}`}
+            title={
+              student.hasDeviceDetails
+                ? `Reset device for ${displayName}`
+                : 'No registered device to reset'
+            }
+            onClick={() => onResetDevice(student)}
+            disabled={!student.hasDeviceDetails}
+            className={
+              student.hasDeviceDetails
+                ? actionButtonClassName
+                : disabledActionButtonClassName
+            }
+          >
+            <MaterialIcon
+              name="restart_alt"
+              size={16}
+              className="text-on-surface-variant"
+            />
+          </button>
         </div>
       </TableCell>
     </TableRow>
@@ -138,6 +166,7 @@ export function StudentsTable({
   onPrevious,
   onRetry,
   onEdit,
+  onResetDevice,
 }: StudentsTableProps) {
   if (error) {
     return (
@@ -197,6 +226,7 @@ export function StudentsTable({
           key={student.id}
           student={student}
           onEdit={onEdit}
+          onResetDevice={onResetDevice}
         />
       ))}
     </DataTable>

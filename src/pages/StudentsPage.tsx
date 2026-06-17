@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { AddStudentModal } from '@/components/students/AddStudentModal'
 import { EditStudentModal } from '@/components/students/EditStudentModal'
+import { ResetStudentDeviceModal } from '@/components/students/ResetStudentDeviceModal'
 import { StudentsPageHeader } from '@/components/students/StudentsPageHeader'
 import { StudentsTable } from '@/components/students/StudentsTable'
 import { useStudents } from '@/hooks/useStudents'
+import { resetStudentDeviceDetails } from '@/lib/students'
 import type { Student } from '@/types/student'
 
 export default function StudentsPage() {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
   const [editingStudentUid, setEditingStudentUid] = useState<string | null>(null)
+  const [resettingStudent, setResettingStudent] = useState<Student | null>(null)
   const {
     students,
     searchInput,
@@ -55,6 +58,20 @@ export default function StudentsPage() {
     refreshStudents()
   }
 
+  function handleResetDevice(student: Student) {
+    setResettingStudent(student)
+  }
+
+  function handleCloseResetModal() {
+    setResettingStudent(null)
+  }
+
+  async function handleConfirmReset() {
+    if (!resettingStudent) return
+    await resetStudentDeviceDetails(resettingStudent.uid)
+    refreshStudents()
+  }
+
   return (
     <div className="flex flex-col gap-gutter">
       <StudentsPageHeader
@@ -86,6 +103,7 @@ export default function StudentsPage() {
         onPrevious={handlePrevious}
         onRetry={handleRetry}
         onEdit={handleEditStudent}
+        onResetDevice={handleResetDevice}
       />
       <AddStudentModal
         key={isAddStudentOpen ? 'add-student-open' : 'add-student-closed'}
@@ -99,6 +117,13 @@ export default function StudentsPage() {
         studentUid={editingStudentUid}
         onClose={handleCloseEditModal}
         onSaved={handleStudentSaved}
+      />
+      <ResetStudentDeviceModal
+        key={resettingStudent ? `reset-device-${resettingStudent.uid}` : 'reset-device-closed'}
+        isOpen={resettingStudent !== null}
+        student={resettingStudent}
+        onClose={handleCloseResetModal}
+        onConfirm={handleConfirmReset}
       />
     </div>
   )
