@@ -50,6 +50,11 @@ export interface GrandTestCustomQuestionPendingImage {
   previewUrl: string
 }
 
+export interface GrandTestNamedRef {
+  id: string
+  name: string
+}
+
 export interface GrandTestCustomQuestionDraft {
   question: string
   answerOptions: QbankAnswerOption[]
@@ -76,17 +81,17 @@ export interface SelectedGrandTestQuestion {
   chapterRefId: string
   subjectName: string
   chapterName: string
+  moduleName: string
   source?: GrandTestQuestionSource
   isCustom?: boolean
   customDraft?: GrandTestCustomQuestionDraft
 }
 
-export interface GrandTestQuestionWrite {
+export interface GrandTestQuestionContentWrite {
   id: string
   order: number
   question: string
   questionImage: string | null
-  subject: string
   options: string[]
   correctOption: {
     option: number
@@ -95,6 +100,12 @@ export interface GrandTestQuestionWrite {
   }
   source: GrandTestQuestionSource
   references?: Array<Record<string, string>>
+}
+
+export interface GrandTestQuestionWrite extends GrandTestQuestionContentWrite {
+  subject: GrandTestNamedRef
+  chapter: GrandTestNamedRef
+  module: string
 }
 
 export interface CreateGrandTestInput {

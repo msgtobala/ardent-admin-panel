@@ -17,6 +17,7 @@ import {
 } from '@/lib/grand-test-custom-question'
 import { deleteGrandTestCustomQuestionImages } from '@/lib/grand-test-custom-question-image-storage'
 import {
+  fetchQbankChapterModuleName,
   fetchQbankChapterName,
   fetchQbankSubjectName,
   resolveQbankQuestionLocationsByDocumentIds,
@@ -25,6 +26,7 @@ import { toDatetimeLocalValue } from '@/lib/format-date'
 import type {
   CreateGrandTestInput,
   GrandTestEditFormData,
+  GrandTestNamedRef,
   GrandTestQuestionSource,
   SelectedGrandTestQuestion,
 } from '@/types/grand-test'
@@ -42,9 +44,24 @@ interface GrandTestQuestionDocument extends DocumentData {
     description?: string
   }
   source?: GrandTestQuestionSource
+  subject?: GrandTestNamedRef | string
+  chapter?: GrandTestNamedRef
+  module?: string
   subjectRefId?: string
   chapterRefId?: string
   questionRefId?: string
+}
+
+function readStoredNamedRef(value: unknown): GrandTestNamedRef | null {
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  const id = typeof record.id === 'string' ? record.id.trim() : ''
+  const name = typeof record.name === 'string' ? record.name.trim() : ''
+
+  if (!id && !name) return null
+
+  return { id, name }
 }
 
 function readStoredQuestionLocation(
@@ -54,23 +71,54 @@ function readStoredQuestionLocation(
   SelectedGrandTestQuestion,
   'subjectRefId' | 'chapterRefId' | 'questionRefId' | 'documentId'
 > | null {
-  if (
-    typeof questionData.subjectRefId !== 'string' ||
-    !questionData.subjectRefId.trim() ||
-    typeof questionData.chapterRefId !== 'string' ||
-    !questionData.chapterRefId.trim()
-  ) {
+  const storedSubject = readStoredNamedRef(questionData.subject)
+  const storedChapter = readStoredNamedRef(questionData.chapter)
+
+  const subjectRefId =
+    storedSubject?.id ||
+    (typeof questionData.subjectRefId === 'string'
+      ? questionData.subjectRefId.trim()
+      : '')
+  const chapterRefId =
+    storedChapter?.id ||
+    (typeof questionData.chapterRefId === 'string'
+      ? questionData.chapterRefId.trim()
+      : '')
+
+  if (!subjectRefId || !chapterRefId) {
     return null
   }
 
   return {
     documentId,
-    subjectRefId: questionData.subjectRefId.trim(),
-    chapterRefId: questionData.chapterRefId.trim(),
+    subjectRefId,
+    chapterRefId,
     questionRefId:
       typeof questionData.questionRefId === 'string' && questionData.questionRefId.trim()
         ? questionData.questionRefId.trim()
         : documentId,
+  }
+}
+
+function readStoredQuestionMetadata(
+  questionData: GrandTestQuestionDocument,
+): Pick<SelectedGrandTestQuestion, 'subjectName' | 'chapterName' | 'moduleName'> | null {
+  const storedSubject = readStoredNamedRef(questionData.subject)
+  const storedChapter = readStoredNamedRef(questionData.chapter)
+  const storedModule =
+    typeof questionData.module === 'string' ? questionData.module.trim() : ''
+
+  if (!storedSubject && !storedChapter && !storedModule) {
+    return null
+  }
+
+  const legacySubjectName =
+    typeof questionData.subject === 'string' ? questionData.subject.trim() : ''
+
+  return {
+    subjectName: storedSubject?.name || legacySubjectName,
+    chapterName: storedChapter?.name || '',
+    moduleName: storedModule,
   }
 }
 
@@ -112,9 +160,18 @@ async function mapGrandTestQuestionToSelected(
       ? data.question.trim()
       : documentId
 
-  const [subjectName, chapterName] = await Promise.all([
-    fetchQbankSubjectName(location.subjectRefId),
-    fetchQbankChapterName(location.subjectRefId, location.chapterRefId),
+  const storedMetadata = readStoredQuestionMetadata(data)
+
+  const [fetchedSubjectName, fetchedChapterName, fetchedModuleName] = await Promise.all([
+    storedMetadata?.subjectName
+      ? Promise.resolve(storedMetadata.subjectName)
+      : fetchQbankSubjectName(location.subjectRefId),
+    storedMetadata?.chapterName
+      ? Promise.resolve(storedMetadata.chapterName)
+      : fetchQbankChapterName(location.subjectRefId, location.chapterRefId),
+    storedMetadata?.moduleName
+      ? Promise.resolve(storedMetadata.moduleName)
+      : fetchQbankChapterModuleName(location.subjectRefId, location.chapterRefId),
   ])
 
   const source = resolveGrandTestQuestionSource(documentId, data)
@@ -126,6 +183,15 @@ async function mapGrandTestQuestionToSelected(
     return null
   }
 
+  const subjectName =
+    fetchedSubjectName === '—' || !fetchedSubjectName
+      ? location.subjectRefId
+      : fetchedSubjectName
+  const chapterName =
+    fetchedChapterName === '—' || !fetchedChapterName
+      ? location.chapterRefId
+      : fetchedChapterName
+
   return {
     documentId: location.documentId,
     questionRefId: location.questionRefId,
@@ -133,8 +199,9 @@ async function mapGrandTestQuestionToSelected(
     questionText,
     subjectRefId: location.subjectRefId,
     chapterRefId: location.chapterRefId,
-    subjectName: subjectName === '—' ? location.subjectRefId : subjectName,
-    chapterName: chapterName === '—' ? location.chapterRefId : chapterName,
+    subjectName,
+    chapterName,
+    moduleName: fetchedModuleName,
     source,
     ...(customDraft
       ? {

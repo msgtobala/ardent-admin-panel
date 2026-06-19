@@ -22,6 +22,7 @@ interface GrandTestCustomQuestionModalProps {
   chapterRefId: string
   subjectName: string
   chapterName: string
+  moduleName: string
   mcqMid: number | null
   disabled?: boolean
   editingQuestion?: SelectedGrandTestQuestion | null
@@ -60,6 +61,7 @@ export function GrandTestCustomQuestionModal({
   chapterRefId,
   subjectName,
   chapterName,
+  moduleName,
   mcqMid,
   disabled = false,
   editingQuestion = null,
@@ -369,6 +371,7 @@ export function GrandTestCustomQuestionModal({
       chapterRefId,
       subjectName,
       chapterName,
+      moduleName,
       source: 'custom',
       isCustom: true,
       customDraft: draft,

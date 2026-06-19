@@ -35,6 +35,7 @@ interface QbankQuestionData {
 export interface QbankChapterOption {
   id: string
   chapterName: string
+  moduleName: string
 }
 
 export interface QbankQuestionOption {
@@ -128,6 +129,20 @@ export async function fetchQbankSubjectName(subjectRefId: string): Promise<strin
   const data = snapshot.data()
   const name = data.subjectName
   return typeof name === 'string' && name.trim() ? name.trim() : '—'
+}
+
+export async function fetchQbankChapterModuleName(
+  subjectRefId: string,
+  chapterRefId: string,
+): Promise<string> {
+  const snapshot = await getDoc(
+    doc(db, QBANKS_COLLECTION, subjectRefId, 'chapters', chapterRefId),
+  )
+  if (!snapshot.exists()) return ''
+
+  const data = snapshot.data()
+  const moduleName = data.moduleName
+  return typeof moduleName === 'string' ? moduleName.trim() : ''
 }
 
 export async function fetchQbankChapterName(
@@ -547,10 +562,13 @@ export async function fetchQbankChapterOptions(
         typeof data.chapterName === 'string' && data.chapterName.trim()
           ? data.chapterName.trim()
           : chapterDoc.id
+      const moduleName =
+        typeof data.moduleName === 'string' ? data.moduleName.trim() : ''
 
       return {
         id: chapterDoc.id,
         chapterName,
+        moduleName,
       }
     })
     .sort((left, right) => left.chapterName.localeCompare(right.chapterName))

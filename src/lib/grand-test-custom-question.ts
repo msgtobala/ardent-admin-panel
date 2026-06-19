@@ -11,7 +11,7 @@ import {
 import type { QbankAnswerOption } from '@/types/qbank-question'
 import type {
   GrandTestCustomQuestionDraft,
-  GrandTestQuestionWrite,
+  GrandTestQuestionContentWrite,
   SelectedGrandTestQuestion,
 } from '@/types/grand-test'
 import {
@@ -81,8 +81,7 @@ export function transformCustomDraftToGrandTestQuestion(
   questionId: string,
   draft: GrandTestCustomQuestionDraft,
   order: number,
-  subjectLabel: string,
-): GrandTestQuestionWrite {
+): GrandTestQuestionContentWrite {
   const questionText = draft.question.trim()
   if (!questionText) {
     throw new Error('Custom question text is required')
@@ -124,7 +123,6 @@ export function transformCustomDraftToGrandTestQuestion(
       description: draft.correctDescription.trim(),
       image: correctAnswerImages,
     },
-    subject: subjectLabel.trim() || 'General',
     source: 'custom',
     ...(references ? { references } : {}),
   }

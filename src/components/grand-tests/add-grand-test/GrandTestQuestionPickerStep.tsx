@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchQbankChapterOptions,
   fetchQbankQuestionOptions,
+  type QbankChapterOption,
   type QbankQuestionOption,
 } from "@/lib/qbank-references";
 import { fetchQbankSubjects } from "@/lib/qbank-subjects";
@@ -78,6 +79,7 @@ export function GrandTestQuestionPickerStep({
   const [editingCustomQuestion, setEditingCustomQuestion] =
     useState<SelectedGrandTestQuestion | null>(null);
   const [chapterOptions, setChapterOptions] = useState<SelectOption[]>([]);
+  const [chapterRecords, setChapterRecords] = useState<QbankChapterOption[]>([]);
   const [chapterQuestions, setChapterQuestions] = useState<
     QbankQuestionOption[]
   >([]);
@@ -155,6 +157,7 @@ export function GrandTestQuestionPickerStep({
         const chapters = await fetchQbankChapterOptions(subjectRefId);
         if (isCancelled) return;
 
+        setChapterRecords(chapters);
         setChapterOptions(
           chapters.map((chapter) => ({
             value: chapter.id,
@@ -223,6 +226,9 @@ export function GrandTestQuestionPickerStep({
   const selectedSubjectLabel = selectedSubject?.subjectName || subjectRefId;
   const selectedChapterLabel =
     chapterOptions.find((option) => option.value === chapterRefId)?.label ?? "";
+  const selectedChapterModuleName =
+    chapterRecords.find((chapter) => chapter.id === chapterRefId)?.moduleName ??
+    "";
 
   const parsedTarget = Number(questions);
   const targetCount =
@@ -277,6 +283,7 @@ export function GrandTestQuestionPickerStep({
       chapterRefId,
       subjectName: selectedSubjectLabel || subjectRefId,
       chapterName: selectedChapterLabel || chapterRefId,
+      moduleName: selectedChapterModuleName,
       source: "qbanks",
     };
   }
@@ -385,6 +392,7 @@ export function GrandTestQuestionPickerStep({
                 setSubjectRefId(value);
                 setChapterRefId("");
                 setChapterOptions([]);
+                setChapterRecords([]);
                 setChapterQuestions([]);
                 setSearchQuery("");
                 onClearFormError?.();
@@ -547,6 +555,9 @@ export function GrandTestQuestionPickerStep({
           }
           chapterName={
             editingCustomQuestion?.chapterName ?? selectedChapterLabel
+          }
+          moduleName={
+            editingCustomQuestion?.moduleName ?? selectedChapterModuleName
           }
           mcqMid={selectedSubject?.mcqMid ?? null}
           disabled={disabled}

@@ -10,7 +10,23 @@ import {
 import { fetchQbankQuestionDocument } from '@/lib/qbank-references'
 import { extractReferencesFromQbankDoc } from '@/lib/grand-test-question-references'
 import { transformQbankToGrandTestQuestion } from '@/lib/grand-test-question-transform'
-import type { SelectedGrandTestQuestion } from '@/types/grand-test'
+import type { GrandTestQuestionWrite, SelectedGrandTestQuestion } from '@/types/grand-test'
+
+function buildGrandTestQuestionMetadata(
+  selected: SelectedGrandTestQuestion,
+): Pick<GrandTestQuestionWrite, 'subject' | 'chapter' | 'module'> {
+  return {
+    subject: {
+      id: selected.subjectRefId,
+      name: selected.subjectName,
+    },
+    chapter: {
+      id: selected.chapterRefId,
+      name: selected.chapterName,
+    },
+    module: selected.moduleName,
+  }
+}
 
 export async function writeGrandTestQuestionsToBatch(
   batch: WriteBatch,
@@ -21,6 +37,7 @@ export async function writeGrandTestQuestionsToBatch(
 
   for (let index = 0; index < selectedQuestions.length; index += 1) {
     const selected = selectedQuestions[index]
+    const metadata = buildGrandTestQuestionMetadata(selected)
 
     if (shouldWriteCustomQuestionToTestOnly(selected)) {
       let questionId = selected.documentId
@@ -42,7 +59,7 @@ export async function writeGrandTestQuestionsToBatch(
         {
           subjectId: selected.subjectRefId,
           chapterId: selected.chapterRefId,
-          moduleName: selected.subjectName,
+          moduleName: selected.moduleName,
           questionRefId: questionId,
         },
       )
@@ -51,13 +68,11 @@ export async function writeGrandTestQuestionsToBatch(
         questionId,
         preparedDraft,
         index + 1,
-        selected.subjectName,
       )
 
       batch.set(doc(testRef, 'questions', questionId), {
         ...transformed,
-        subjectRefId: selected.subjectRefId,
-        chapterRefId: selected.chapterRefId,
+        ...metadata,
         questionRefId: questionId,
       })
       continue
@@ -85,9 +100,8 @@ export async function writeGrandTestQuestionsToBatch(
 
     batch.set(doc(testRef, 'questions', questionDocument.documentId), {
       ...transformed,
+      ...metadata,
       ...(references ? { references } : {}),
-      subjectRefId: selected.subjectRefId,
-      chapterRefId: selected.chapterRefId,
       questionRefId: selected.questionRefId,
     })
   }

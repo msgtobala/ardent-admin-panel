@@ -1,5 +1,5 @@
 import type { DocumentData } from 'firebase/firestore'
-import type { GrandTestQuestionWrite } from '@/types/grand-test'
+import type { GrandTestQuestionContentWrite } from '@/types/grand-test'
 
 interface QbankAnswerOptionEntry {
   choice?: string
@@ -45,18 +45,6 @@ function normalizeExplanationImages(image: string | string[] | undefined): strin
     return [image]
   }
   return []
-}
-
-function resolveSubject(data: QbankQuestionSource): string {
-  const tag = data.tags?.find((item) => typeof item === 'string' && item.trim() !== '')
-  if (tag) return tag.trim()
-
-  const topic = data.microtopics?.find(
-    (item) => typeof item === 'string' && item.trim() !== '',
-  )
-  if (topic) return topic.trim()
-
-  return 'General'
 }
 
 function getAnswerOptionLabel(option: QbankAnswerOptionEntry): string {
@@ -105,7 +93,7 @@ export function transformQbankToGrandTestQuestion(
   docId: string,
   data: DocumentData,
   order: number,
-): GrandTestQuestionWrite {
+): GrandTestQuestionContentWrite {
   const source = data as QbankQuestionSource
   const questionText = typeof source.question === 'string' ? source.question.trim() : ''
 
@@ -151,7 +139,6 @@ export function transformQbankToGrandTestQuestion(
       description,
       image: normalizeExplanationImages(source.correctAnswer?.image),
     },
-    subject: resolveSubject(source),
     order,
     source: 'qbanks',
   }
