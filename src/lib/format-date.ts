@@ -6,6 +6,21 @@ export function formatBannerDate(date: Date): string {
   })
 }
 
+export function formatDeviceLoginTimestamp(
+  date: Date | null,
+  fallback = 'Not available',
+): string {
+  if (!date || Number.isNaN(date.getTime())) return fallback
+
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 export function toDateInputValue(date: Date | null): string {
   if (!date) return ''
 

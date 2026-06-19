@@ -13,6 +13,12 @@ export interface StudentPlansSnapshot {
   purchaseId?: unknown
 }
 
+export interface StudentDeviceDetails {
+  deviceName: string
+  platform: string
+  loginTimestamp: Date | null
+}
+
 export interface Student {
   id: string
   uid: string

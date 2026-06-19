@@ -21,6 +21,7 @@ import type {
   Student,
   StudentAcademicDetails,
   StudentDetail,
+  StudentDeviceDetails,
   StudentDocument,
   StudentPlansSnapshot,
   StudentSortField,
@@ -82,19 +83,63 @@ function parsePlansSnapshot(
   return plans
 }
 
+function parseLoginTimestamp(value: unknown): Date | null {
+  if (value == null) return null
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value
+  }
+
+  if (
+    typeof value === 'object' &&
+    'toDate' in value &&
+    typeof (value as { toDate: () => Date }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate()
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  return null
+}
+
 function parseHasDeviceDetails(deviceDetails: StudentDocument['deviceDetails']): boolean {
+  return parseDeviceDetails(deviceDetails) != null
+}
+
+export function parseDeviceDetails(
+  deviceDetails: StudentDocument['deviceDetails'],
+): StudentDeviceDetails | null {
   if (deviceDetails == null || typeof deviceDetails !== 'object' || Array.isArray(deviceDetails)) {
-    return false
+    return null
   }
 
   const record = deviceDetails as Record<string, unknown>
+  const deviceName = typeof record.deviceName === 'string' ? record.deviceName.trim() : ''
+  const platform = typeof record.platform === 'string' ? record.platform.trim() : ''
+  const loginTimestamp = parseLoginTimestamp(record.loginTimestamp)
 
-  return (
+  const hasMeaningfulData =
     typeof record.deviceId === 'string' ||
-    typeof record.deviceName === 'string' ||
-    typeof record.platform === 'string' ||
-    record.loginTimestamp != null
-  )
+    deviceName.length > 0 ||
+    platform.length > 0 ||
+    loginTimestamp != null
+
+  if (!hasMeaningfulData) return null
+
+  return {
+    deviceName: deviceName || 'Unknown device',
+    platform: platform || 'Unknown platform',
+    loginTimestamp,
+  }
+}
+
+export async function fetchStudentDeviceDetails(
+  uid: string,
+): Promise<StudentDeviceDetails | null> {
+  const docSnap = await getDocFromServer(doc(db, STUDENTS_COLLECTION, uid))
+  if (!docSnap.exists()) return null
+
+  const data = docSnap.data() as StudentDocument
+  return parseDeviceDetails(data.deviceDetails)
 }
 
 export async function resolveStudentsDeviceDetails(students: Student[]): Promise<Student[]> {
