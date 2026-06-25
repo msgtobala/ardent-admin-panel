@@ -103,7 +103,10 @@ export default function VideosPage() {
   }
 
   const isFormModalOpen = modalState?.mode === 'add' || modalState?.mode === 'edit'
-  const editingLesson = modalState?.mode === 'edit' ? modalState.lesson : null
+  const editingLesson = useMemo(() => {
+    if (modalState?.mode !== 'edit') return null
+    return allLessons.find((lesson) => lesson.id === modalState.lesson.id) ?? modalState.lesson
+  }, [modalState, allLessons])
   const deletingLesson = modalState?.mode === 'delete' ? modalState.lesson : null
 
   const moduleNameOptions = useMemo(

@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { uploadVideoLessonFile } from '@/lib/mux-video-upload'
 import type { ExternalVideoUploadState } from '@/types/mux-video-upload'
-import { createVideoLesson, updateVideoLesson } from '@/lib/video-lessons'
+import {
+  createVideoLesson,
+  updateVideoLesson,
+  updateVideoLessonNotes,
+} from '@/lib/video-lessons'
+import {
+  deleteVideoLessonNotesFromPath,
+  uploadVideoLessonNotes,
+} from '@/lib/video-lesson-notes-storage'
 import { MUX_ASSET_STATUS, type VideoLesson } from '@/types/video-lesson'
 import { useSnackbar } from '@/contexts/SnackbarContext'
 import { ActiveToggle } from '@/components/banners/ActiveToggle'
@@ -17,6 +25,7 @@ import type { ThumbnailGenerationConfig } from '@/types/thumbnail-generation'
 import { VideoLessonMuxStatus } from '@/components/videos/VideoLessonMuxStatus'
 import { VideoLessonPlayer } from '@/components/videos/VideoLessonPlayer'
 import { VideoLessonThumbnailPreview } from '@/components/videos/VideoLessonThumbnailPreview'
+import { VideoLessonNotesUpload } from '@/components/videos/VideoLessonNotesUpload'
 import { VideoLessonVideoUpload } from '@/components/videos/VideoLessonVideoUpload'
 
 interface EditVideoLessonModalProps {
@@ -71,10 +80,15 @@ export function EditVideoLessonModal({
   const [thumbnailImage, setThumbnailImage] = useState('')
   const [isThumbnailConfigOpen, setIsThumbnailConfigOpen] = useState(false)
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false)
+  const [pendingNotesFile, setPendingNotesFile] = useState<File | null>(null)
+  const [notesRemoved, setNotesRemoved] = useState(false)
+  const [isNotesUploading, setIsNotesUploading] = useState(false)
+  const [savedNotesPath, setSavedNotesPath] = useState('')
 
   const uploadSubjectId = lesson?.subjectId ?? subjectId ?? ''
   const uploadLessonId = lesson?.id ?? createdLessonId ?? ''
-  const isFormBusy = isSubmitting || isVideoUploading || isGeneratingThumbnail
+  const existingNotesPath = notesRemoved ? null : savedNotesPath.trim() || null
+  const isFormBusy = isSubmitting || isVideoUploading || isGeneratingThumbnail || isNotesUploading
   const isAwaitingUploadAfterCreate = Boolean(
     isAddMode &&
       createdLessonId &&
@@ -107,6 +121,10 @@ export function EditVideoLessonModal({
     setThumbnailImage(lesson?.thumbnailImage ?? '')
     setIsThumbnailConfigOpen(false)
     setIsGeneratingThumbnail(false)
+    setPendingNotesFile(null)
+    setNotesRemoved(false)
+    setIsNotesUploading(false)
+    setSavedNotesPath(lesson?.notes?.trim() ?? '')
   }, [isOpen, lesson])
 
   const handleClose = useCallback(() => {
@@ -152,6 +170,39 @@ export function EditVideoLessonModal({
     return valid
   }
 
+  async function syncLessonNotesChanges(
+    targetSubjectId: string,
+    targetLessonId: string,
+    storedNotesPath: string | null,
+  ): Promise<void> {
+    const hasNotesChanges = notesRemoved || Boolean(pendingNotesFile)
+    if (!hasNotesChanges) return
+
+    setIsNotesUploading(true)
+
+    try {
+      if (notesRemoved && storedNotesPath) {
+        await deleteVideoLessonNotesFromPath(storedNotesPath)
+        await updateVideoLessonNotes(targetSubjectId, targetLessonId, '')
+        setNotesRemoved(false)
+        setSavedNotesPath('')
+        return
+      }
+
+      if (pendingNotesFile) {
+        const storagePath = await uploadVideoLessonNotes(pendingNotesFile, {
+          subjectId: targetSubjectId,
+          lessonId: targetLessonId,
+        })
+        await updateVideoLessonNotes(targetSubjectId, targetLessonId, storagePath)
+        setPendingNotesFile(null)
+        setSavedNotesPath(storagePath)
+      }
+    } finally {
+      setIsNotesUploading(false)
+    }
+  }
+
   async function handleSave() {
     if (!validate()) return
 
@@ -171,6 +222,18 @@ export function EditVideoLessonModal({
         const newLessonId = await createVideoLesson(subjectId, sharedInput)
         setCreatedLessonId(newLessonId)
         onSaved()
+
+        try {
+          await syncLessonNotesChanges(subjectId, newLessonId, null)
+        } catch (notesError) {
+          const message =
+            notesError instanceof Error
+              ? notesError.message
+              : 'Notes upload failed. Please try again.'
+          setFormError(message)
+          showSnackbar(message)
+          return
+        }
 
         if (pendingVideoFile) {
           const fileName = pendingVideoFile.name
@@ -211,6 +274,24 @@ export function EditVideoLessonModal({
       }
 
       if (lesson) {
+        try {
+          await syncLessonNotesChanges(
+            lesson.subjectId,
+            lesson.id,
+            savedNotesPath.trim() || null,
+          )
+        } catch (notesError) {
+          const message =
+            notesError instanceof Error
+              ? notesError.message
+              : notesRemoved
+                ? 'Failed to remove notes. Please try again.'
+                : 'Notes upload failed. Please try again.'
+          setFormError(message)
+          showSnackbar(message)
+          return
+        }
+
         await updateVideoLesson(lesson.subjectId, lesson.id, sharedInput)
         showSnackbar('Video lesson updated successfully')
         onSaved()
@@ -219,6 +300,18 @@ export function EditVideoLessonModal({
       }
 
       if (isAddMode && createdLessonId && subjectId) {
+        try {
+          await syncLessonNotesChanges(subjectId, createdLessonId, null)
+        } catch (notesError) {
+          const message =
+            notesError instanceof Error
+              ? notesError.message
+              : 'Notes upload failed. Please try again.'
+          setFormError(message)
+          showSnackbar(message)
+          return
+        }
+
         await updateVideoLesson(subjectId, createdLessonId, sharedInput)
         showSnackbar('Video lesson updated successfully')
         onSaved()
@@ -439,6 +532,29 @@ export function EditVideoLessonModal({
               <span className="text-body-md text-on-surface">Free</span>
             </div>
           </div>
+
+          <VideoLessonNotesUpload
+            file={pendingNotesFile}
+            existingNotesPath={existingNotesPath}
+            notesRemoved={notesRemoved}
+            disabled={isFormBusy || isAwaitingUploadAfterCreate}
+            deferUploadUntilSave={isAddMode && !createdLessonId}
+            onFileChange={(file) => {
+              setPendingNotesFile(file)
+              if (file) setNotesRemoved(false)
+            }}
+            onRemove={() => {
+              if (pendingNotesFile) {
+                setPendingNotesFile(null)
+                return
+              }
+
+              if (savedNotesPath.trim()) {
+                setNotesRemoved(true)
+              }
+            }}
+            onUndoRemove={() => setNotesRemoved(false)}
+          />
 
           {!isAddMode && lesson ? (
             <VideoLessonThumbnailPreview

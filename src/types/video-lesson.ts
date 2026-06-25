@@ -21,6 +21,7 @@ export interface VideoLesson {
   moduleName: string
   description: string
   thumbnailImage: string
+  notes: string
   duration: number
   muxAssetId: string
   muxPlaybackId: string
@@ -45,6 +46,7 @@ export interface VideoLessonDocument {
   moduleName?: string
   description?: string
   thumbnailImage?: string
+  notes?: string
   duration?: number
   muxAssetId?: string
   muxPlaybackId?: string

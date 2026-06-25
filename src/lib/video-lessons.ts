@@ -94,6 +94,7 @@ export function mapVideoLessonDoc(
     moduleName: data.moduleName ?? '',
     description: data.description ?? '',
     thumbnailImage: data.thumbnailImage ?? '',
+    notes: data.notes ?? '',
     duration: data.duration ?? 0,
     muxAssetId: data.muxAssetId ?? '',
     muxPlaybackId: data.muxPlaybackId ?? '',
@@ -171,6 +172,7 @@ export async function createVideoLesson(
     moduleName: input.moduleName.trim(),
     description: input.description.trim(),
     thumbnailImage: '',
+    notes: '',
     duration: 0,
     muxAssetId: '',
     muxPlaybackId: '',
@@ -319,6 +321,17 @@ export async function updateVideoLessonThumbnailImage(
 ): Promise<void> {
   await updateDoc(doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, lessonId), {
     thumbnailImage: thumbnailImage.trim(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateVideoLessonNotes(
+  subjectId: string,
+  lessonId: string,
+  notes: string,
+): Promise<void> {
+  await updateDoc(doc(db, VIDEOS_COLLECTION, subjectId, LESSONS_SUBCOLLECTION, lessonId), {
+    notes: notes.trim(),
     updatedAt: serverTimestamp(),
   })
 }
