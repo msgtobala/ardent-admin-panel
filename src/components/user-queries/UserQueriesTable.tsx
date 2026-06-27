@@ -1,10 +1,16 @@
 import {
   formatUserQueryContextSummary,
+  formatUserQueryStatus,
   formatUserQueryType,
 } from '@/lib/user-query-display'
 import { formatBannerDate } from '@/lib/format-date'
 import { USER_QUERIES_PAGE_SIZE } from '@/lib/user-queries'
-import type { SortDirection, UserQuery, UserQuerySortField } from '@/types/user-query'
+import type {
+  SortDirection,
+  UserQuery,
+  UserQuerySortField,
+  UserQueryStatusFilter,
+} from '@/types/user-query'
 import {
   DataTable,
   SortableTableHeader,
@@ -26,6 +32,8 @@ interface UserQueriesTableProps {
   isInitialLoading: boolean
   isPageLoading: boolean
   error?: string
+  errorIndexUrl?: string
+  statusFilter: UserQueryStatusFilter
   hasNext: boolean
   hasPrevious: boolean
   sortField: UserQuerySortField
@@ -45,10 +53,10 @@ const actionButtonClassName =
   'inline-flex size-8 cursor-pointer items-center justify-center rounded-full transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
 
 const USER_QUERY_COLUMN_WIDTHS = [
-  'w-[140px]',
-  'w-[120px]',
-  undefined,
-  'w-[140px]',
+  'w-[200px]',
+  'w-[100px]',
+  'w-[200px]',
+  'w-[200px]',
   'w-[120px]',
   'w-[140px]',
   'w-[180px]',
@@ -103,9 +111,9 @@ function UserQueryRow({
   return (
     <TableRow>
       <TableCell>
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
           <span
-            className="max-w-[96px] truncate text-body-md text-text-black"
+            className="min-w-0 truncate text-body-md text-text-black"
             title={query.id}
           >
             {query.id}
@@ -116,18 +124,18 @@ function UserQueryRow({
       <TableCell className="whitespace-nowrap text-body-md text-text-black">
         {formatUserQueryType(query.type)}
       </TableCell>
-      <TableCell>
-        <span
-          className="block truncate text-body-md text-text-black"
-          title={formatUserQueryContextSummary(query)}
-        >
+      <TableCell
+        className="max-w-0 text-body-md text-text-black"
+        title={formatUserQueryContextSummary(query)}
+      >
+        <span className="block truncate">
           {formatUserQueryContextSummary(query)}
         </span>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
           <span
-            className="max-w-[96px] truncate text-body-md text-text-black"
+            className="min-w-0 truncate text-body-md text-text-black"
             title={query.userId}
           >
             {query.userId || '—'}
@@ -219,6 +227,8 @@ export function UserQueriesTable({
   isInitialLoading,
   isPageLoading,
   error,
+  errorIndexUrl,
+  statusFilter,
   hasNext,
   hasPrevious,
   sortField,
@@ -233,14 +243,26 @@ export function UserQueriesTable({
   onReject,
   onReopen,
 }: UserQueriesTableProps) {
+  const emptyMessage =
+    statusFilter === 'all'
+      ? 'No user queries yet. Tickets submitted from the app will appear here.'
+      : `No ${formatUserQueryStatus(statusFilter).toLowerCase()} tickets found.`
+
   if (error) {
-    return <TableErrorState message={error} onRetry={onRetry} />
+    return (
+      <TableErrorState
+        message={error}
+        indexUrl={errorIndexUrl}
+        onRetry={onRetry}
+      />
+    )
   }
 
   return (
     <DataTable
       columnCount={7}
       columnWidths={USER_QUERY_COLUMN_WIDTHS}
+      minWidth={1140}
       rowCount={queries.length}
       pageSize={USER_QUERIES_PAGE_SIZE}
       isInitialLoading={isInitialLoading}
@@ -252,7 +274,7 @@ export function UserQueriesTable({
       hasPrevious={hasPrevious}
       onNext={onNext}
       onPrevious={onPrevious}
-      emptyMessage="No user queries yet. Tickets submitted from the app will appear here."
+      emptyMessage={emptyMessage}
       skeletonRows={<UserQueriesTableSkeletonRows />}
       header={
         <TableHeaderRow>

@@ -16,13 +16,16 @@ export default function UserQueriesPage() {
     isInitialLoading,
     isPageLoading,
     error,
+    errorIndexUrl,
     hasNext,
     hasPrevious,
     sortField,
     sortDirection,
+    statusFilter,
     updatingStatusId,
     pendingStatusAction,
     handleSort,
+    handleStatusFilterChange,
     handleNext,
     handlePrevious,
     handleRetry,
@@ -45,7 +48,12 @@ export default function UserQueriesPage() {
 
   return (
     <div className="flex flex-col gap-gutter">
-      <UserQueriesPageHeader totalCount={totalCount} />
+      <UserQueriesPageHeader
+        totalCount={totalCount}
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        disabled={isInitialLoading}
+      />
       <UserQueriesTable
         queries={queries}
         currentPage={currentPage}
@@ -54,6 +62,8 @@ export default function UserQueriesPage() {
         isInitialLoading={isInitialLoading}
         isPageLoading={isPageLoading}
         error={error}
+        errorIndexUrl={errorIndexUrl}
+        statusFilter={statusFilter}
         hasNext={hasNext}
         hasPrevious={hasPrevious}
         sortField={sortField}

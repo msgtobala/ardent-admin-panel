@@ -1,6 +1,8 @@
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
 import { useSnackbar } from '@/contexts/SnackbarContext'
+import { getFirestoreErrorDetails } from '@/lib/firestore-error'
+import { isUserQueryStatusFilter } from '@/lib/user-query-display'
 import {
   USER_QUERIES_PAGE_SIZE,
   fetchUserQueriesPage,
@@ -12,6 +14,7 @@ import type {
   UserQuery,
   UserQuerySortField,
   UserQueryStatus,
+  UserQueryStatusFilter,
 } from '@/types/user-query'
 
 export type UserQueryStatusAction = 'resolve' | 'reject' | 'reopen'
@@ -22,6 +25,7 @@ export function useUserQueriesPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
+  const [errorIndexUrl, setErrorIndexUrl] = useState<string | undefined>()
   const [pageIndex, setPageIndex] = useState(0)
   const [pageCursors, setPageCursors] = useState<
     (QueryDocumentSnapshot<DocumentData> | null)[]
@@ -31,6 +35,7 @@ export function useUserQueriesPage() {
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
   const [sortField, setSortField] = useState<UserQuerySortField>('createdAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [statusFilter, setStatusFilter] = useState<UserQueryStatusFilter>('all')
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [pendingStatusAction, setPendingStatusAction] =
     useState<UserQueryStatusAction | null>(null)
@@ -40,10 +45,17 @@ export function useUserQueriesPage() {
   const totalPages =
     totalCount === 0 ? 1 : Math.ceil(totalCount / USER_QUERIES_PAGE_SIZE)
 
+  const resetPagination = useCallback(() => {
+    setQueries([])
+    setPageIndex(0)
+    setPageCursors([null])
+  }, [])
+
   const loadPage = useCallback(
     async (cursor: QueryDocumentSnapshot<DocumentData> | null) => {
       setIsLoading(true)
       setError(undefined)
+      setErrorIndexUrl(undefined)
 
       try {
         const shouldFetchCount = cursor === null
@@ -53,21 +65,29 @@ export function useUserQueriesPage() {
             lastDoc: cursor,
             sortField,
             sortDirection,
+            statusFilter,
           }),
-          shouldFetchCount ? getUserQueriesCount() : Promise.resolve(undefined),
+          shouldFetchCount
+            ? getUserQueriesCount(statusFilter)
+            : Promise.resolve(undefined),
         ])
 
         setQueries(pageResult.queries)
         if (count !== undefined) setTotalCount(count)
         setHasNext(pageResult.hasMore)
         setLastDocOnPage(pageResult.lastDoc)
-      } catch {
-        setError('Failed to load user queries. Please try again.')
+      } catch (loadError) {
+        const details = getFirestoreErrorDetails(
+          loadError,
+          'Failed to load user queries. Please try again.',
+        )
+        setError(details.message)
+        setErrorIndexUrl(details.indexUrl)
       } finally {
         setIsLoading(false)
       }
     },
-    [sortField, sortDirection],
+    [sortField, sortDirection, statusFilter],
   )
 
   useEffect(() => {
@@ -76,9 +96,7 @@ export function useUserQueriesPage() {
 
   const handleSort = useCallback(
     (field: UserQuerySortField) => {
-      setQueries([])
-      setPageIndex(0)
-      setPageCursors([null])
+      resetPagination()
 
       if (sortField === field) {
         setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -88,7 +106,16 @@ export function useUserQueriesPage() {
       setSortField(field)
       setSortDirection(field === 'createdAt' ? 'desc' : 'asc')
     },
-    [sortField],
+    [resetPagination, sortField],
+  )
+
+  const handleStatusFilterChange = useCallback(
+    (value: string) => {
+      if (!isUserQueryStatusFilter(value) || value === statusFilter) return
+      setStatusFilter(value)
+      resetPagination()
+    },
+    [resetPagination, statusFilter],
   )
 
   const handleNext = useCallback(() => {
@@ -112,9 +139,8 @@ export function useUserQueriesPage() {
   }, [loadPage, pageCursors, pageIndex])
 
   const refreshQueries = useCallback(() => {
-    setPageIndex(0)
-    setPageCursors([null])
-  }, [])
+    resetPagination()
+  }, [resetPagination])
 
   const statusSuccessMessage: Record<UserQueryStatus, string> = {
     opened: 'Ticket reopened',
@@ -139,9 +165,16 @@ export function useUserQueriesPage() {
 
       try {
         await updateUserQueryStatus(id, status)
-        setQueries((prev) =>
-          prev.map((query) => (query.id === id ? { ...query, status } : query)),
-        )
+        setQueries((prev) => {
+          if (statusFilter !== 'all' && status !== statusFilter) {
+            setTotalCount((count) => Math.max(0, count - 1))
+            return prev.filter((query) => query.id !== id)
+          }
+
+          return prev.map((query) =>
+            query.id === id ? { ...query, status } : query,
+          )
+        })
         showSnackbar(statusSuccessMessage[status])
       } catch {
         showSnackbar(statusFailureMessage[status])
@@ -150,7 +183,7 @@ export function useUserQueriesPage() {
         setPendingStatusAction(null)
       }
     },
-    [showSnackbar],
+    [showSnackbar, statusFilter],
   )
 
   const handleResolve = useCallback(
@@ -180,13 +213,16 @@ export function useUserQueriesPage() {
     isInitialLoading,
     isPageLoading,
     error,
+    errorIndexUrl,
     hasNext,
     hasPrevious,
     sortField,
     sortDirection,
+    statusFilter,
     updatingStatusId,
     pendingStatusAction,
     handleSort,
+    handleStatusFilterChange,
     handleNext,
     handlePrevious,
     handleRetry,

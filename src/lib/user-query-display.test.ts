@@ -4,6 +4,7 @@ import {
   formatUserQueryType,
   getUserQueryQuestionRefs,
   getUserQueryVideoRefs,
+  isUserQueryStatusFilter,
   normalizeUserQueryStatus,
   normalizeUserQueryType,
 } from '@/lib/user-query-display'
@@ -18,6 +19,9 @@ describe('user query display helpers', () => {
     expect(normalizeUserQueryStatus(undefined)).toBe('opened')
     expect(normalizeUserQueryStatus('resolved')).toBe('resolved')
     expect(normalizeUserQueryStatus('rejected')).toBe('rejected')
+    expect(isUserQueryStatusFilter('all')).toBe(true)
+    expect(isUserQueryStatusFilter('opened')).toBe(true)
+    expect(isUserQueryStatusFilter('unknown')).toBe(false)
   })
 
   it('formats qbanks and video context summaries', () => {

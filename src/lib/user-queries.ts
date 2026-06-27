@@ -9,7 +9,9 @@ import {
   serverTimestamp,
   startAfter,
   updateDoc,
+  where,
   type DocumentData,
+  type Query,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import {
@@ -23,6 +25,7 @@ import type {
   UserQueryDocument,
   UserQuerySortField,
   UserQueryStatus,
+  UserQueryStatusFilter,
 } from '@/types/user-query'
 import { db } from './firebase'
 
@@ -59,28 +62,43 @@ export interface FetchUserQueriesPageResult {
   hasMore: boolean
 }
 
+function buildUserQueriesQuery(options: {
+  sortField: UserQuerySortField
+  sortDirection: SortDirection
+  statusFilter?: UserQueryStatusFilter
+}): Query<DocumentData> {
+  const constraints = []
+
+  if (options.statusFilter && options.statusFilter !== 'all') {
+    constraints.push(where('status', '==', options.statusFilter))
+  }
+
+  constraints.push(orderBy(options.sortField, options.sortDirection))
+
+  return query(userQueriesRef, ...constraints)
+}
+
 export async function fetchUserQueriesPage(options: {
   pageSize?: number
   lastDoc?: QueryDocumentSnapshot<DocumentData> | null
   sortField?: UserQuerySortField
   sortDirection?: SortDirection
+  statusFilter?: UserQueryStatusFilter
 }): Promise<FetchUserQueriesPageResult> {
   const pageSize = options.pageSize ?? USER_QUERIES_PAGE_SIZE
   const sortField = options.sortField ?? 'createdAt'
   const sortDirection = options.sortDirection ?? 'desc'
+  const statusFilter = options.statusFilter ?? 'all'
+
+  const baseQuery = buildUserQueriesQuery({
+    sortField,
+    sortDirection,
+    statusFilter,
+  })
 
   const q = options.lastDoc
-    ? query(
-        userQueriesRef,
-        orderBy(sortField, sortDirection),
-        startAfter(options.lastDoc),
-        limit(pageSize + 1),
-      )
-    : query(
-        userQueriesRef,
-        orderBy(sortField, sortDirection),
-        limit(pageSize + 1),
-      )
+    ? query(baseQuery, startAfter(options.lastDoc), limit(pageSize + 1))
+    : query(baseQuery, limit(pageSize + 1))
 
   const snapshot = await getDocs(q)
   const docs = snapshot.docs
@@ -95,8 +113,14 @@ export async function fetchUserQueriesPage(options: {
   }
 }
 
-export async function getUserQueriesCount(): Promise<number> {
-  const snapshot = await getCountFromServer(userQueriesRef)
+export async function getUserQueriesCount(
+  statusFilter: UserQueryStatusFilter = 'all',
+): Promise<number> {
+  const countQuery =
+    statusFilter === 'all'
+      ? userQueriesRef
+      : query(userQueriesRef, where('status', '==', statusFilter))
+  const snapshot = await getCountFromServer(countQuery)
   return snapshot.data().count
 }
 

@@ -1,7 +1,9 @@
+import type { SelectOption } from '@/components/ui/SelectField'
 import type {
   UserQuery,
   UserQueryContext,
   UserQueryStatus,
+  UserQueryStatusFilter,
   UserQueryType,
 } from '@/types/user-query'
 
@@ -50,6 +52,23 @@ export function formatUserQueryType(type: UserQueryType): string {
 
 export function formatUserQueryStatus(status: UserQueryStatus): string {
   return USER_QUERY_STATUS_LABELS[status]
+}
+
+export const USER_QUERY_STATUS_FILTER_OPTIONS: SelectOption[] = [
+  { value: 'all', label: 'All statuses' },
+  ...Object.entries(USER_QUERY_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
+]
+
+export function isUserQueryStatusFilter(value: string): value is UserQueryStatusFilter {
+  return (
+    value === 'all' ||
+    value === 'opened' ||
+    value === 'resolved' ||
+    value === 'rejected'
+  )
 }
 
 function joinNonEmpty(parts: Array<string | undefined>): string {
