@@ -73,7 +73,7 @@ export function GrandTestBasicDetailsStep({
         <div className="grid gap-gutter lg:grid-cols-2">
           <DateTimeFieldGroup
             id="grand-test-start"
-            label="Start Date & Time"
+            label="Start Date & Time (IST)"
             required
             value={testStartValue}
             disabled={disabled}
@@ -84,7 +84,7 @@ export function GrandTestBasicDetailsStep({
 
           <DateTimeFieldGroup
             id="grand-test-expiry"
-            label="End Date & Time"
+            label="End Date & Time (IST)"
             required
             value={testExpiryValue}
             disabled={disabled}

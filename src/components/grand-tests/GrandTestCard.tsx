@@ -1,4 +1,4 @@
-import { formatDisplayDate } from "@/lib/format-display-date";
+import { formatGrandTestDisplayDate } from "@/lib/format-display-date";
 import type { GrandTest } from "@/types/grand-test";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { GrandTestStatusBadge } from "./GrandTestStatusBadge";
@@ -92,11 +92,11 @@ export function GrandTestCard({
       <div className="flex flex-1 flex-col gap-4 px-4 py-4">
         <DetailField
           label="Start Date"
-          value={formatDisplayDate(test.testStart)}
+          value={formatGrandTestDisplayDate(test.testStart)}
         />
         <DetailField
           label="End Date"
-          value={formatDisplayDate(test.testExpiry)}
+          value={formatGrandTestDisplayDate(test.testExpiry)}
         />
         <DetailField label="No. of Questions" value={String(test.questions)} />
         {showLeaderboard ? (

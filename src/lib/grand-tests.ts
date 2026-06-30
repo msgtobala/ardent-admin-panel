@@ -20,7 +20,7 @@ import { db } from './firebase'
 export const GRAND_TESTS_COLLECTION = 'grand_tests'
 export const GRAND_TESTS_CARDS_PAGE_SIZE = 6
 
-const GRAND_TEST_TIME_ZONE = 'Asia/Kolkata'
+export const GRAND_TEST_TIME_ZONE = 'Asia/Kolkata'
 
 const grandTestsRef = collection(db, GRAND_TESTS_COLLECTION)
 

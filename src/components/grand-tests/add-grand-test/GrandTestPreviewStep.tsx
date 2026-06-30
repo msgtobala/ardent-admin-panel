@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatDisplayDate } from '@/lib/format-display-date'
+import { formatGrandTestDisplayDate } from '@/lib/format-display-date'
 import type { SelectedGrandTestQuestion } from '@/types/grand-test'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { GrandTestStatusBadge } from '@/components/grand-tests/GrandTestStatusBadge'
@@ -91,11 +91,11 @@ export function GrandTestPreviewStep({
           />
           <PreviewField
             label="Start Date & Time"
-            value={testStart ? formatDisplayDate(testStart) : '—'}
+            value={testStart ? formatGrandTestDisplayDate(testStart) : '—'}
           />
           <PreviewField
             label="End Date & Time"
-            value={testExpiry ? formatDisplayDate(testExpiry) : '—'}
+            value={testExpiry ? formatGrandTestDisplayDate(testExpiry) : '—'}
           />
           <PreviewField label="Correct Mark" value={String(correctMark)} />
           <PreviewField label="Negative Mark" value={String(negativeMark)} />

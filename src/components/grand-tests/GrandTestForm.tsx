@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createGrandTest } from '@/lib/grand-test-create'
 import { updateGrandTest } from '@/lib/grand-test-edit'
-import { fromDatetimeLocalValue } from '@/lib/format-date'
+import { fromGrandTestDatetimeValue } from '@/lib/format-date'
+import { areGrandTestQuestionsUnchanged } from '@/lib/grand-test-question-sync'
 import type {
   GrandTestEditFormData,
   GrandTestFormStep,
@@ -64,6 +65,7 @@ export function GrandTestForm({
 }: GrandTestFormProps) {
   const { showSnackbar } = useSnackbar()
   const initialState = resolveInitialState(initialData)
+  const initialQuestionsRef = useRef(initialState.selectedQuestions)
   const [currentStep, setCurrentStep] = useState<GrandTestFormStep>(1)
   const [title, setTitle] = useState(initialState.title)
   const [testStartValue, setTestStartValue] = useState(initialState.testStartValue)
@@ -89,11 +91,11 @@ export function GrandTestForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const parsedTestStart = useMemo(
-    () => fromDatetimeLocalValue(testStartValue),
+    () => fromGrandTestDatetimeValue(testStartValue),
     [testStartValue],
   )
   const parsedTestExpiry = useMemo(
-    () => fromDatetimeLocalValue(testExpiryValue),
+    () => fromGrandTestDatetimeValue(testExpiryValue),
     [testExpiryValue],
   )
   const parsedDuration = useMemo(() => Number(duration), [duration])
@@ -269,7 +271,11 @@ export function GrandTestForm({
 
     try {
       if (mode === 'edit') {
-        await updateGrandTest(testId!, payload)
+        const syncQuestions = !areGrandTestQuestionsUnchanged(
+          initialQuestionsRef.current,
+          selectedQuestions,
+        )
+        await updateGrandTest(testId!, payload, { syncQuestions })
         showSnackbar('Grand test updated successfully')
       } else {
         await createGrandTest(payload)
