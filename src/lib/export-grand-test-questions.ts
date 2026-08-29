@@ -433,6 +433,8 @@ function drawAnswerKeySection(
   y += 24
 
   const { head, body } = buildGrandTestAnswerKeyPdfTableData(rows)
+  const bodyFont = resolvePdfFontStyle(fonts, 'regular')
+  const headFont = resolvePdfFontStyle(fonts, 'bold')
 
   autoTable(doc, {
     head,
@@ -440,7 +442,8 @@ function drawAnswerKeySection(
     startY: y,
     margin: { left: MARGIN_X, right: MARGIN_X, bottom: FOOTER_HEIGHT + 12 },
     styles: {
-      font: fonts.regular,
+      font: bodyFont.fontName,
+      fontStyle: bodyFont.fontStyle,
       fontSize: 9,
       cellPadding: 6,
       textColor: BRAND.onSurface,
@@ -448,9 +451,10 @@ function drawAnswerKeySection(
       lineWidth: 0.5,
     },
     headStyles: {
+      font: headFont.fontName,
+      fontStyle: headFont.fontStyle,
       fillColor: BRAND.primary,
       textColor: BRAND.white,
-      fontStyle: 'bold',
     },
     alternateRowStyles: {
       fillColor: BRAND.rowAlt,
