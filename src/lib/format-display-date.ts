@@ -1,9 +1,19 @@
+import { GRAND_TEST_TIME_ZONE } from '@/lib/grand-tests'
+
 const DAILY_QUESTION_TIME_ZONE = 'Asia/Kolkata'
 
 export function formatDisplayDate(date: Date): string {
   return new Intl.DateTimeFormat('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
+  }).format(date)
+}
+
+export function formatGrandTestDisplayDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: GRAND_TEST_TIME_ZONE,
   }).format(date)
 }
 

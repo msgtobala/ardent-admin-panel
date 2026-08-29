@@ -1,3 +1,106 @@
+import { GRAND_TEST_TIME_ZONE } from '@/lib/grand-tests'
+
+const DATETIME_IN_TIMEZONE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
+
+function getDateTimePartsInTimeZone(
+  date: Date,
+  timeZone: string,
+): {
+  year: string
+  month: string
+  day: string
+  hour: string
+  minute: string
+} {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const map = Object.fromEntries(
+    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]),
+  )
+
+  return {
+    year: map.year ?? '',
+    month: map.month ?? '',
+    day: map.day ?? '',
+    hour: map.hour ?? '',
+    minute: map.minute ?? '',
+  }
+}
+
+function normalizeHourValue(hour: string): string {
+  return hour === '24' ? '00' : hour
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = getDateTimePartsInTimeZone(date, timeZone)
+  const normalizedHour = normalizeHourValue(parts.hour)
+
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(normalizedHour),
+    Number(parts.minute),
+  )
+
+  return asUtc - date.getTime()
+}
+
+export function toDatetimeInTimeZone(date: Date | null, timeZone: string): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+
+  const parts = getDateTimePartsInTimeZone(date, timeZone)
+  if (!parts.year || !parts.month || !parts.day || !parts.hour || !parts.minute) {
+    return ''
+  }
+
+  const hour = normalizeHourValue(parts.hour)
+  return `${parts.year}-${parts.month}-${parts.day}T${hour}:${parts.minute}`
+}
+
+export function fromDatetimeInTimeZone(value: string, timeZone: string): Date | null {
+  const trimmed = value.trim()
+  const match = DATETIME_IN_TIMEZONE_PATTERN.exec(trimmed)
+  if (!match) return null
+
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = match
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+  const hour = Number(hourStr)
+  const minute = Number(minuteStr)
+
+  if (![year, month, day, hour, minute].every(Number.isFinite)) return null
+
+  const wallClockUtcMs = Date.UTC(year, month - 1, day, hour, minute)
+  const guess = new Date(wallClockUtcMs)
+  const offset = getTimeZoneOffsetMs(guess, timeZone)
+  const result = new Date(wallClockUtcMs - offset)
+
+  const offsetAfter = getTimeZoneOffsetMs(result, timeZone)
+  if (offsetAfter !== offset) {
+    return new Date(wallClockUtcMs - offsetAfter)
+  }
+
+  return result
+}
+
+export function toGrandTestDatetimeValue(date: Date | null): string {
+  return toDatetimeInTimeZone(date, GRAND_TEST_TIME_ZONE)
+}
+
+export function fromGrandTestDatetimeValue(value: string): Date | null {
+  return fromDatetimeInTimeZone(value, GRAND_TEST_TIME_ZONE)
+}
+
 export function formatBannerDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     month: 'short',

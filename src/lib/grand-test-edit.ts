@@ -22,7 +22,7 @@ import {
   fetchQbankSubjectName,
   resolveQbankQuestionLocationsByDocumentIds,
 } from '@/lib/qbank-references'
-import { toDatetimeLocalValue } from '@/lib/format-date'
+import { toGrandTestDatetimeValue } from '@/lib/format-date'
 import type {
   CreateGrandTestInput,
   GrandTestEditFormData,
@@ -33,6 +33,10 @@ import type {
 import { GRAND_TESTS_COLLECTION, mapGrandTestDoc } from './grand-tests'
 import { writeGrandTestQuestionsToBatch } from './grand-test-questions-write'
 import { db } from './firebase'
+
+export interface UpdateGrandTestOptions {
+  syncQuestions?: boolean
+}
 
 interface GrandTestQuestionDocument extends DocumentData {
   id?: string
@@ -261,8 +265,8 @@ export async function fetchGrandTestForEdit(
 
   return {
     title: test.title,
-    testStartValue: toDatetimeLocalValue(test.testStart),
-    testExpiryValue: toDatetimeLocalValue(test.testExpiry),
+    testStartValue: toGrandTestDatetimeValue(test.testStart),
+    testExpiryValue: toGrandTestDatetimeValue(test.testExpiry),
     isFree: test.isFree,
     isActive: test.isActive,
     correctMark: String(test.correctMark),
@@ -276,6 +280,7 @@ export async function fetchGrandTestForEdit(
 export async function updateGrandTest(
   testId: string,
   input: CreateGrandTestInput,
+  options: UpdateGrandTestOptions = {},
 ): Promise<void> {
   if (input.selectedQuestions.length === 0) {
     throw new Error('At least one question is required')
@@ -287,12 +292,8 @@ export async function updateGrandTest(
     )
   }
 
+  const syncQuestions = options.syncQuestions ?? true
   const testRef = doc(db, GRAND_TESTS_COLLECTION, testId)
-  const existingQuestionsSnapshot = await getDocs(collection(testRef, 'questions'))
-  const nextQuestionIds = new Set(
-    input.selectedQuestions.map((question) => question.documentId),
-  )
-
   const batch = writeBatch(db)
 
   batch.update(testRef, {
@@ -306,6 +307,16 @@ export async function updateGrandTest(
     isFree: input.isFree,
     isActive: input.isActive,
   })
+
+  if (!syncQuestions) {
+    await batch.commit()
+    return
+  }
+
+  const existingQuestionsSnapshot = await getDocs(collection(testRef, 'questions'))
+  const nextQuestionIds = new Set(
+    input.selectedQuestions.map((question) => question.documentId),
+  )
 
   const removedCustomQuestionImageUrls: string[] = []
 
