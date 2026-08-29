@@ -1,10 +1,13 @@
 import { doc, type DocumentReference, type WriteBatch } from 'firebase/firestore'
 import { isCustomQbankQuestionId } from '@/lib/qbank-question-id'
 import {
+  hasEditableQuestionDraft,
   isPendingCustomQuestionId,
+  isQbankSyncEnabled,
   prepareCustomQuestionDraftImages,
   resolveCustomGrandTestQuestionId,
-  shouldWriteCustomQuestionToTestOnly,
+  resolveSelectedQuestionSource,
+  syncQuestionDraftToQbankMaster,
   transformCustomDraftToGrandTestQuestion,
 } from '@/lib/grand-test-custom-question'
 import { fetchQbankQuestionDocument } from '@/lib/qbank-references'
@@ -39,10 +42,14 @@ export async function writeGrandTestQuestionsToBatch(
     const selected = selectedQuestions[index]
     const metadata = buildGrandTestQuestionMetadata(selected)
 
-    if (shouldWriteCustomQuestionToTestOnly(selected)) {
+    if (hasEditableQuestionDraft(selected)) {
+      const source = resolveSelectedQuestionSource(selected)
       let questionId = selected.documentId
 
-      if (isPendingCustomQuestionId(questionId) || !isCustomQbankQuestionId(questionId)) {
+      if (
+        source === 'custom' &&
+        (isPendingCustomQuestionId(questionId) || !isCustomQbankQuestionId(questionId))
+      ) {
         questionId = await resolveCustomGrandTestQuestionId({
           subjectId: selected.subjectRefId,
           chapterId: selected.chapterRefId,
@@ -62,18 +69,39 @@ export async function writeGrandTestQuestionsToBatch(
           moduleName: selected.moduleName,
           questionRefId: questionId,
         },
+        {
+          // Avoid deleting shared qbank Storage assets when editing a copy.
+          deleteRemovedImages: source === 'custom',
+        },
       )
+
+      const questionWithPreparedDraft = {
+        ...selected,
+        documentId: questionId,
+        questionRefId: selected.questionRefId || questionId,
+        customDraft: preparedDraft,
+      }
+
+      const syncedWithQbank =
+        source === 'qbanks' ? questionWithPreparedDraft.syncWithQbank !== false : undefined
+
+      if (isQbankSyncEnabled(questionWithPreparedDraft)) {
+        await syncQuestionDraftToQbankMaster(questionWithPreparedDraft)
+      }
 
       const transformed = transformCustomDraftToGrandTestQuestion(
         questionId,
         preparedDraft,
         index + 1,
+        source,
+        syncedWithQbank,
       )
 
       batch.set(doc(testRef, 'questions', questionId), {
         ...transformed,
         ...metadata,
-        questionRefId: questionId,
+        questionRefId:
+          source === 'custom' ? questionId : selected.questionRefId || questionId,
       })
       continue
     }
@@ -103,6 +131,7 @@ export async function writeGrandTestQuestionsToBatch(
       ...metadata,
       ...(references ? { references } : {}),
       questionRefId: selected.questionRefId,
+      syncedWithQbank: true,
     })
   }
 }

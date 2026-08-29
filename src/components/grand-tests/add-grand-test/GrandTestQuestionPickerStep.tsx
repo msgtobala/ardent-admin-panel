@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ensureSelectedQuestionHasDraft,
+} from "@/lib/grand-test-custom-question";
+import { getFirestoreErrorDetails } from "@/lib/firestore-error";
+import {
   fetchQbankChapterOptions,
   fetchQbankQuestionOptions,
   type QbankChapterOption,
@@ -76,8 +80,9 @@ export function GrandTestQuestionPickerStep({
   const [subjectOptions, setSubjectOptions] = useState<SelectOption[]>([]);
   const [isCustomQuestionModalOpen, setIsCustomQuestionModalOpen] =
     useState(false);
-  const [editingCustomQuestion, setEditingCustomQuestion] =
+  const [editingQuestion, setEditingQuestion] =
     useState<SelectedGrandTestQuestion | null>(null);
+  const [isPreparingEdit, setIsPreparingEdit] = useState(false);
   const [chapterOptions, setChapterOptions] = useState<SelectOption[]>([]);
   const [chapterRecords, setChapterRecords] = useState<QbankChapterOption[]>([]);
   const [chapterQuestions, setChapterQuestions] = useState<
@@ -236,14 +241,14 @@ export function GrandTestQuestionPickerStep({
 
   function handleOpenCustomQuestionModal() {
     if (!subjectRefId || !chapterRefId) return;
-    setEditingCustomQuestion(null);
+    setEditingQuestion(null);
     setIsCustomQuestionModalOpen(true);
     onClearFormError?.();
   }
 
   function handleCloseCustomQuestionModal() {
     setIsCustomQuestionModalOpen(false);
-    setEditingCustomQuestion(null);
+    setEditingQuestion(null);
   }
 
   function handleAddCustomQuestion(question: SelectedGrandTestQuestion) {
@@ -251,18 +256,39 @@ export function GrandTestQuestionPickerStep({
     onClearFormError?.();
   }
 
-  function handleEditCustomQuestion(documentId: string) {
+  async function handleEditQuestion(documentId: string) {
     const question = selectedQuestions.find(
       (item) => item.documentId === documentId,
     );
-    if (!question?.isCustom || !question.customDraft) return;
+    if (!question || isPreparingEdit) return;
 
-    setEditingCustomQuestion(question);
-    setIsCustomQuestionModalOpen(true);
+    setIsPreparingEdit(true);
+    setLoadError(undefined);
     onClearFormError?.();
+
+    try {
+      const questionWithDraft = await ensureSelectedQuestionHasDraft(question);
+      onSelectedQuestionsChange(
+        selectedQuestions.map((item) =>
+          item.documentId === questionWithDraft.documentId
+            ? questionWithDraft
+            : item,
+        ),
+      );
+      setEditingQuestion(questionWithDraft);
+      setIsCustomQuestionModalOpen(true);
+    } catch (error) {
+      const details = getFirestoreErrorDetails(
+        error,
+        "Failed to open question for editing. Please try again.",
+      );
+      setLoadError(details.message);
+    } finally {
+      setIsPreparingEdit(false);
+    }
   }
 
-  function handleSaveCustomQuestion(question: SelectedGrandTestQuestion) {
+  function handleSaveQuestion(question: SelectedGrandTestQuestion) {
     onSelectedQuestionsChange(
       selectedQuestions.map((item) =>
         item.documentId === question.documentId ? question : item,
@@ -285,6 +311,7 @@ export function GrandTestQuestionPickerStep({
       chapterName: selectedChapterLabel || chapterRefId,
       moduleName: selectedChapterModuleName,
       source: "qbanks",
+      syncWithQbank: true,
     };
   }
 
@@ -506,10 +533,10 @@ export function GrandTestQuestionPickerStep({
 
             <SelectedQuestionsList
               questions={selectedQuestions}
-              disabled={disabled}
+              disabled={disabled || isPreparingEdit}
               onRemove={handleRemoveQuestion}
               onView={handleViewSelectedQuestion}
-              onEditCustomQuestion={handleEditCustomQuestion}
+              onEditQuestion={handleEditQuestion}
             />
 
             {selectedQuestionsError ? (
@@ -545,26 +572,26 @@ export function GrandTestQuestionPickerStep({
       />
 
       {isCustomQuestionModalOpen &&
-      (editingCustomQuestion || (subjectRefId && chapterRefId)) ? (
+      (editingQuestion || (subjectRefId && chapterRefId)) ? (
         <GrandTestCustomQuestionModal
           isOpen={isCustomQuestionModalOpen}
-          subjectRefId={editingCustomQuestion?.subjectRefId ?? subjectRefId}
-          chapterRefId={editingCustomQuestion?.chapterRefId ?? chapterRefId}
+          subjectRefId={editingQuestion?.subjectRefId ?? subjectRefId}
+          chapterRefId={editingQuestion?.chapterRefId ?? chapterRefId}
           subjectName={
-            editingCustomQuestion?.subjectName ?? selectedSubjectLabel
+            editingQuestion?.subjectName ?? selectedSubjectLabel
           }
           chapterName={
-            editingCustomQuestion?.chapterName ?? selectedChapterLabel
+            editingQuestion?.chapterName ?? selectedChapterLabel
           }
           moduleName={
-            editingCustomQuestion?.moduleName ?? selectedChapterModuleName
+            editingQuestion?.moduleName ?? selectedChapterModuleName
           }
           mcqMid={selectedSubject?.mcqMid ?? null}
           disabled={disabled}
-          editingQuestion={editingCustomQuestion}
+          editingQuestion={editingQuestion}
           onClose={handleCloseCustomQuestionModal}
           onAdd={handleAddCustomQuestion}
-          onSave={handleSaveCustomQuestion}
+          onSave={handleSaveQuestion}
         />
       ) : null}
     </div>

@@ -92,7 +92,7 @@ export function GrandTestQuestionDetailModal({
             {question.questionText}
           </p>
 
-          {question.isCustom && question.customDraft ? (
+          {question.customDraft ? (
             <GrandTestCustomQuestionDetailInline draft={question.customDraft} />
           ) : (
             <div className="border-t border-border-subtle pt-4">

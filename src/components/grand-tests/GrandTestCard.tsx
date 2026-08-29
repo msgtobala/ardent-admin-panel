@@ -9,6 +9,9 @@ interface GrandTestCardProps {
   onEdit?: (test: GrandTest) => void;
   showLeaderboard?: boolean;
   onViewLeaderboard?: (test: GrandTest) => void;
+  showExport?: boolean;
+  onExportQuestions?: (test: GrandTest) => void;
+  isExporting?: boolean;
 }
 
 interface DetailFieldProps {
@@ -49,6 +52,9 @@ export function GrandTestCard({
   onEdit,
   showLeaderboard = false,
   onViewLeaderboard,
+  showExport = false,
+  onExportQuestions,
+  isExporting = false,
 }: GrandTestCardProps) {
   return (
     <article className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface-white shadow-tier-1">
@@ -106,6 +112,22 @@ export function GrandTestCard({
           />
         ) : null}
         <div className="mt-auto flex flex-col gap-3">
+          {showExport && onExportQuestions ? (
+            <button
+              type="button"
+              aria-label={`Export questions for ${test.title || test.id}`}
+              disabled={isExporting}
+              onClick={() => onExportQuestions(test)}
+              className="inline-flex h-[34px] w-full cursor-pointer items-center justify-center gap-2 rounded-button border border-border-subtle bg-surface-white px-4 py-2 text-body-md font-medium text-on-surface transition hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <MaterialIcon
+                name={isExporting ? "hourglass_top" : "download"}
+                size={18}
+                className="text-primary"
+              />
+              {isExporting ? "Exporting…" : "Export Questions"}
+            </button>
+          ) : null}
           {showLeaderboard && onViewLeaderboard ? (
             <button
               type="button"

@@ -8,12 +8,20 @@ import {
   parseMcqQuestionId,
   resolveNextCustomQbankQuestionIdentity,
 } from '@/lib/qbank-question-id'
-import type { QbankAnswerOption } from '@/types/qbank-question'
+import type {
+  QbankAnswerOption,
+  QbankQuestionEditPayload,
+  UpdateQbankQuestionInput,
+} from '@/types/qbank-question'
 import type {
   GrandTestCustomQuestionDraft,
   GrandTestQuestionContentWrite,
+  GrandTestQuestionSource,
   SelectedGrandTestQuestion,
 } from '@/types/grand-test'
+import { resolveCorrectOptionKey } from './qbank-question-display'
+import { updateQbankQuestion } from './qbank-questions'
+import { fetchQbankQuestionForEdit } from './qbank-references'
 import {
   EMPTY_QBANK_QUESTION_REFERENCE,
   parseGrandTestReferencesFromDoc,
@@ -77,14 +85,42 @@ export async function deleteGrandTestCustomQuestionDocAssets(
   await deleteGrandTestCustomQuestionImages(imageUrls)
 }
 
+export function resolveSelectedQuestionSource(
+  selected: SelectedGrandTestQuestion,
+): GrandTestQuestionSource {
+  if (selected.source === 'custom' || selected.source === 'qbanks') {
+    return selected.source
+  }
+  if (selected.isCustom === true) return 'custom'
+  return isCustomQbankQuestionId(selected.documentId) ? 'custom' : 'qbanks'
+}
+
+export function isQbankSyncEnabled(selected: SelectedGrandTestQuestion): boolean {
+  return (
+    resolveSelectedQuestionSource(selected) === 'qbanks' &&
+    selected.syncWithQbank !== false &&
+    selected.hasLocalEdits === true
+  )
+}
+
+export function hasEditableQuestionDraft(
+  selected: SelectedGrandTestQuestion,
+): selected is SelectedGrandTestQuestion & {
+  customDraft: GrandTestCustomQuestionDraft
+} {
+  return selected.customDraft != null
+}
+
 export function transformCustomDraftToGrandTestQuestion(
   questionId: string,
   draft: GrandTestCustomQuestionDraft,
   order: number,
+  source: GrandTestQuestionSource = 'custom',
+  syncedWithQbank?: boolean,
 ): GrandTestQuestionContentWrite {
   const questionText = draft.question.trim()
   if (!questionText) {
-    throw new Error('Custom question text is required')
+    throw new Error('Question text is required')
   }
 
   const options = draft.answerOptions
@@ -92,7 +128,7 @@ export function transformCustomDraftToGrandTestQuestion(
     .filter((choice) => choice.length > 0)
 
   if (options.length < 2) {
-    throw new Error('Custom question must have at least two answer options')
+    throw new Error('Question must have at least two answer options')
   }
 
   const correctIndex = draft.answerOptions.findIndex(
@@ -100,7 +136,7 @@ export function transformCustomDraftToGrandTestQuestion(
   )
 
   if (correctIndex < 0 || correctIndex >= options.length) {
-    throw new Error(`Custom question ${questionId} has an invalid correct answer`)
+    throw new Error(`Question ${questionId} has an invalid correct answer`)
   }
 
   const questionImage = draft.questionImage?.trim() || null
@@ -123,8 +159,11 @@ export function transformCustomDraftToGrandTestQuestion(
       description: draft.correctDescription.trim(),
       image: correctAnswerImages,
     },
-    source: 'custom',
+    source,
     ...(references ? { references } : {}),
+    ...(source === 'qbanks' && typeof syncedWithQbank === 'boolean'
+      ? { syncedWithQbank }
+      : {}),
   }
 }
 
@@ -207,8 +246,11 @@ export function resolveCustomCorrectAnswerImagePreviews(
 export async function prepareCustomQuestionDraftImages(
   draft: GrandTestCustomQuestionDraft,
   params: UploadGrandTestCustomQuestionImageParams,
+  options?: { deleteRemovedImages?: boolean },
 ): Promise<GrandTestCustomQuestionDraft> {
-  if (draft.removedStorageImageUrls?.length) {
+  const shouldDeleteRemovedImages = options?.deleteRemovedImages !== false
+
+  if (shouldDeleteRemovedImages && draft.removedStorageImageUrls?.length) {
     await deleteGrandTestCustomQuestionImages(draft.removedStorageImageUrls)
   }
 
@@ -375,6 +417,7 @@ export function isPendingCustomQuestionId(documentId: string): boolean {
   return documentId.trim().startsWith('pending-cus-')
 }
 
+/** @deprecated Use hasEditableQuestionDraft */
 export function shouldWriteCustomQuestionToTestOnly(
   selected: SelectedGrandTestQuestion,
 ): selected is SelectedGrandTestQuestion & {
@@ -382,4 +425,110 @@ export function shouldWriteCustomQuestionToTestOnly(
   customDraft: GrandTestCustomQuestionDraft
 } {
   return selected.isCustom === true && selected.customDraft != null
+}
+
+export function mapQbankEditPayloadToDraft(
+  payload: QbankQuestionEditPayload,
+): GrandTestCustomQuestionDraft | null {
+  const answerOptions = payload.answerOptions
+    .map((answerOption, index) => ({
+      option: answerOption.option.trim() || String.fromCharCode(65 + index),
+      choice: answerOption.choice.trim(),
+      sortOrder: index,
+    }))
+    .filter((answerOption) => answerOption.choice.length > 0)
+
+  if (!payload.questionText.trim() || answerOptions.length < 2) return null
+
+  const correctOptionKey = resolveCorrectOptionKey(
+    answerOptions,
+    payload.correctAnswer?.option.trim() || answerOptions[0]?.option || 'A',
+  )
+
+  return {
+    question: payload.questionText.trim(),
+    answerOptions,
+    correctOptionKey,
+    correctDescription: payload.correctAnswer?.description.trim() ?? '',
+    reference: payload.reference,
+    questionImage: payload.questionImage,
+    correctAnswerImages: [...payload.correctAnswerImages],
+  }
+}
+
+export function buildQbankUpdateInputFromDraft(
+  draft: GrandTestCustomQuestionDraft,
+  existing: Pick<QbankQuestionEditPayload, 'isActive' | 'sortOrder' | 'difficulty' | 'tags'>,
+): UpdateQbankQuestionInput {
+  return {
+    question: draft.question.trim(),
+    questionImage: draft.questionImage,
+    difficulty: existing.difficulty,
+    tags: existing.tags,
+    answerOptions: draft.answerOptions,
+    correctAnswer: {
+      option: draft.correctOptionKey,
+      description: draft.correctDescription.trim(),
+    },
+    correctAnswerImages: draft.correctAnswerImages,
+    reference: draft.reference,
+    isActive: existing.isActive,
+    sortOrder: existing.sortOrder ?? 0,
+  }
+}
+
+export async function syncQuestionDraftToQbankMaster(
+  selected: SelectedGrandTestQuestion & { customDraft: GrandTestCustomQuestionDraft },
+): Promise<void> {
+  const existing = await fetchQbankQuestionForEdit(
+    selected.subjectRefId,
+    selected.chapterRefId,
+    selected.documentId,
+  )
+
+  if (!existing) {
+    throw new Error(
+      `Question ${selected.questionRefId} could not be found in the question bank to sync`,
+    )
+  }
+
+  await updateQbankQuestion(
+    selected.subjectRefId,
+    selected.chapterRefId,
+    selected.documentId,
+    buildQbankUpdateInputFromDraft(selected.customDraft, existing),
+  )
+}
+
+export async function ensureSelectedQuestionHasDraft(
+  selected: SelectedGrandTestQuestion,
+): Promise<SelectedGrandTestQuestion> {
+  if (selected.customDraft) return selected
+
+  const source = resolveSelectedQuestionSource(selected)
+  if (source === 'custom') {
+    throw new Error(`Custom question ${selected.questionRefId} is missing editable content`)
+  }
+
+  const payload = await fetchQbankQuestionForEdit(
+    selected.subjectRefId,
+    selected.chapterRefId,
+    selected.documentId,
+  )
+
+  if (!payload) {
+    throw new Error(`Question ${selected.questionRefId} could not be loaded for editing`)
+  }
+
+  const customDraft = mapQbankEditPayloadToDraft(payload)
+  if (!customDraft) {
+    throw new Error(`Question ${selected.questionRefId} is missing required fields for editing`)
+  }
+
+  return {
+    ...selected,
+    source: 'qbanks',
+    customDraft,
+    syncWithQbank: selected.syncWithQbank !== false,
+  }
 }

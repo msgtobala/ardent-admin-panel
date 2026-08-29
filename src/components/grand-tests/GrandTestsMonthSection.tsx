@@ -12,6 +12,9 @@ interface GrandTestsMonthSectionProps {
   onEdit?: (test: GrandTest) => void
   showLeaderboard?: boolean
   onViewLeaderboard?: (test: GrandTest) => void
+  showExport?: boolean
+  onExportQuestions?: (test: GrandTest) => void
+  exportingTestId?: string | null
 }
 
 function GrandTestCardSkeleton() {
@@ -46,6 +49,9 @@ export function GrandTestsMonthSection({
   onEdit,
   showLeaderboard = false,
   onViewLeaderboard,
+  showExport = false,
+  onExportQuestions,
+  exportingTestId = null,
 }: GrandTestsMonthSectionProps) {
   const [pageIndex, setPageIndex] = useState(0)
 
@@ -115,6 +121,9 @@ export function GrandTestsMonthSection({
                 onEdit={onEdit}
                 showLeaderboard={showLeaderboard}
                 onViewLeaderboard={onViewLeaderboard}
+                showExport={showExport}
+                onExportQuestions={onExportQuestions}
+                isExporting={exportingTestId === test.id}
               />
             ))}
           </div>

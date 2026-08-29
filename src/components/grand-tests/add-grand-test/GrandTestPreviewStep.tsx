@@ -143,6 +143,11 @@ export function GrandTestPreviewStep({
                           Custom
                         </span>
                       ) : null}
+                      {question.source === 'qbanks' && question.syncWithQbank === false ? (
+                        <span className="inline-flex rounded-full bg-warning-bg px-2 py-0.5 text-caption font-medium text-tertiary">
+                          Test only
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-body-md text-on-surface">
                       {question.questionText}

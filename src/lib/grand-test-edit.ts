@@ -50,6 +50,7 @@ interface GrandTestQuestionDocument extends DocumentData {
   subjectRefId?: string
   chapterRefId?: string
   questionRefId?: string
+  syncedWithQbank?: boolean
 }
 
 function readStoredNamedRef(value: unknown): GrandTestNamedRef | null {
@@ -177,7 +178,7 @@ async function mapGrandTestQuestionToSelected(
   const source = resolveGrandTestQuestionSource(documentId, data)
   const isCustom = source === 'custom'
 
-  const customDraft = isCustom ? mapGrandTestQuestionDocToCustomDraft(data) : null
+  const customDraft = mapGrandTestQuestionDocToCustomDraft(data)
 
   if (isCustom && !customDraft) {
     return null
@@ -192,6 +193,13 @@ async function mapGrandTestQuestionToSelected(
       ? location.chapterRefId
       : fetchedChapterName
 
+  const syncWithQbank =
+    source === 'qbanks'
+      ? typeof data.syncedWithQbank === 'boolean'
+        ? data.syncedWithQbank
+        : true
+      : undefined
+
   return {
     documentId: location.documentId,
     questionRefId: location.questionRefId,
@@ -203,12 +211,9 @@ async function mapGrandTestQuestionToSelected(
     chapterName,
     moduleName: fetchedModuleName,
     source,
-    ...(customDraft
-      ? {
-          isCustom: true as const,
-          customDraft,
-        }
-      : {}),
+    ...(isCustom ? { isCustom: true as const } : {}),
+    ...(customDraft ? { customDraft } : {}),
+    ...(typeof syncWithQbank === 'boolean' ? { syncWithQbank } : {}),
   }
 }
 

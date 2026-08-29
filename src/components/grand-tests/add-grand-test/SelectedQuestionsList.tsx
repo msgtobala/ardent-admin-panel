@@ -7,7 +7,7 @@ interface SelectedQuestionsListProps {
   listMaxHeightClass?: string;
   onRemove: (documentId: string) => void;
   onView: (documentId: string) => void;
-  onEditCustomQuestion?: (documentId: string) => void;
+  onEditQuestion?: (documentId: string) => void;
 }
 
 const iconButtonClassName =
@@ -17,13 +17,21 @@ function isCustomQuestion(question: SelectedGrandTestQuestion): boolean {
   return question.source === "custom" || question.isCustom === true;
 }
 
+function isTestOnlyOverride(question: SelectedGrandTestQuestion): boolean {
+  return (
+    !isCustomQuestion(question) &&
+    question.source === "qbanks" &&
+    question.syncWithQbank === false
+  );
+}
+
 export function SelectedQuestionsList({
   questions,
   disabled = false,
   listMaxHeightClass = "max-h-[min(28rem,55vh)]",
   onRemove,
   onView,
-  onEditCustomQuestion,
+  onEditQuestion,
 }: SelectedQuestionsListProps) {
   if (questions.length === 0) {
     return (
@@ -63,6 +71,11 @@ export function SelectedQuestionsList({
                     Custom
                   </span>
                 ) : null}
+                {isTestOnlyOverride(question) ? (
+                  <span className="inline-flex rounded-full bg-warning-bg px-2 py-0.5 text-caption font-medium text-tertiary">
+                    Test only
+                  </span>
+                ) : null}
               </div>
               <p className="mt-0.5 line-clamp-1 text-body-md text-on-surface">
                 {question.questionText}
@@ -85,12 +98,12 @@ export function SelectedQuestionsList({
                   className="text-on-surface-variant"
                 />
               </button>
-              {isCustomQuestion(question) && onEditCustomQuestion ? (
+              {onEditQuestion ? (
                 <button
                   type="button"
                   aria-label={`Edit ${question.questionRefId}`}
                   disabled={disabled}
-                  onClick={() => onEditCustomQuestion(question.documentId)}
+                  onClick={() => onEditQuestion(question.documentId)}
                   className={iconButtonClassName}
                 >
                   <MaterialIcon

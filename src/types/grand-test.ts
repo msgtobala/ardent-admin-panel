@@ -84,7 +84,15 @@ export interface SelectedGrandTestQuestion {
   moduleName: string
   source?: GrandTestQuestionSource
   isCustom?: boolean
+  /** Editable content for custom questions and in-test edits of qbank copies. */
   customDraft?: GrandTestCustomQuestionDraft
+  /**
+   * When source is `qbanks`, whether saving should also update the master qbank
+   * question. Defaults to true when omitted.
+   */
+  syncWithQbank?: boolean
+  /** True after the admin edits this question in the modal during this session. */
+  hasLocalEdits?: boolean
 }
 
 export interface GrandTestQuestionContentWrite {
@@ -100,6 +108,8 @@ export interface GrandTestQuestionContentWrite {
   }
   source: GrandTestQuestionSource
   references?: Array<Record<string, string>>
+  /** Persisted for qbank-sourced questions; omitted for custom. */
+  syncedWithQbank?: boolean
 }
 
 export interface GrandTestQuestionWrite extends GrandTestQuestionContentWrite {

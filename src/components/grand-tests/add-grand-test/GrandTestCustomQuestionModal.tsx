@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { ActiveToggle } from '@/components/banners/ActiveToggle'
 import { QbankCorrectAnswerImagesUpload } from '@/components/qbank-questions/QbankCorrectAnswerImagesUpload'
 import { QbankQuestionImageUpload } from '@/components/qbank-questions/QbankQuestionImageUpload'
-import { createPendingCustomQuestionId } from '@/lib/grand-test-custom-question'
+import {
+  createPendingCustomQuestionId,
+  resolveSelectedQuestionSource,
+} from '@/lib/grand-test-custom-question'
 import { getFirestoreErrorDetails } from '@/lib/firestore-error'
 import { resolveNextCustomQbankQuestionIdentity } from '@/lib/qbank-question-id'
 import type { QbankAnswerOption } from '@/types/qbank-question'
@@ -70,6 +74,10 @@ export function GrandTestCustomQuestionModal({
   onSave,
 }: GrandTestCustomQuestionModalProps) {
   const isEditMode = editingQuestion != null
+  const editingSource = editingQuestion
+    ? resolveSelectedQuestionSource(editingQuestion)
+    : 'custom'
+  const isEditingQbankQuestion = isEditMode && editingSource === 'qbanks'
   const initializedModalKeyRef = useRef<string | null>(null)
 
   const [questionText, setQuestionText] = useState('')
@@ -80,6 +88,7 @@ export function GrandTestCustomQuestionModal({
   const [referencePageNo, setReferencePageNo] = useState('')
   const [referenceChapter, setReferenceChapter] = useState('')
   const [proposedQuestionId, setProposedQuestionId] = useState('')
+  const [syncWithQbank, setSyncWithQbank] = useState(true)
   const [questionTextError, setQuestionTextError] = useState<string | undefined>()
   const [answerOptionsError, setAnswerOptionsError] = useState<string | undefined>()
   const [correctOptionError, setCorrectOptionError] = useState<string | undefined>()
@@ -127,6 +136,7 @@ export function GrandTestCustomQuestionModal({
     setReferencePageNo('')
     setReferenceChapter('')
     setProposedQuestionId('')
+    setSyncWithQbank(true)
     setQuestionTextError(undefined)
     setAnswerOptionsError(undefined)
     setCorrectOptionError(undefined)
@@ -174,6 +184,11 @@ export function GrandTestCustomQuestionModal({
       setReferencePageNo(draft.reference.pageNo)
       setReferenceChapter(draft.reference.chapter)
       setProposedQuestionId(question.questionRefId)
+      setSyncWithQbank(
+        resolveSelectedQuestionSource(question) === 'qbanks'
+          ? question.syncWithQbank !== false
+          : true,
+      )
       setPersistedQuestionImage(draft.questionImage)
       setPersistedCorrectAnswerImages([...draft.correctAnswerImages])
       initialCorrectAnswerImageUrlsRef.current = [...draft.correctAnswerImages]
@@ -346,13 +361,27 @@ export function GrandTestCustomQuestionModal({
     const draft = buildDraft()
 
     if (isEditMode && editingQuestion && onSave) {
+      const source = resolveSelectedQuestionSource(editingQuestion)
+      const nextSyncWithQbank = source === 'qbanks' ? syncWithQbank : undefined
+
+      if (source === 'qbanks' && nextSyncWithQbank) {
+        const confirmed = window.confirm(
+          'Sync is on. Saving will update this grand test copy and the master question bank record. Continue?',
+        )
+        if (!confirmed) return
+      }
+
       onSave({
         ...editingQuestion,
         label: buildQuestionLabel(editingQuestion.questionRefId, draft.question),
         questionText: draft.question,
-        source: 'custom',
-        isCustom: true,
+        source,
+        isCustom: source === 'custom',
         customDraft: draft,
+        hasLocalEdits: true,
+        ...(typeof nextSyncWithQbank === 'boolean'
+          ? { syncWithQbank: nextSyncWithQbank }
+          : {}),
       })
       clearFormAfterSave()
       onClose()
@@ -383,7 +412,11 @@ export function GrandTestCustomQuestionModal({
 
   if (!isOpen) return null
 
-  const dialogTitle = isEditMode ? 'Edit custom question' : 'Add custom question'
+  const dialogTitle = isEditMode
+    ? isEditingQbankQuestion
+      ? 'Edit question'
+      : 'Edit custom question'
+    : 'Add custom question'
   const submitLabel = isEditMode ? 'Save changes' : 'Add to test'
   const submitIcon = isEditMode ? 'save' : 'add'
   const isSubmitDisabled =
@@ -442,6 +475,25 @@ export function GrandTestCustomQuestionModal({
         </div>
 
         <div className="flex flex-1 flex-col gap-gutter overflow-y-auto px-gutter py-gutter">
+          {isEditingQbankQuestion ? (
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-border-subtle bg-surface-container-low px-4 py-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="text-label-sm font-semibold text-on-surface">
+                  Sync with question bank
+                </p>
+                <p className="text-body-md text-on-surface-variant">
+                  On by default. Turn off to update only this grand test copy.
+                </p>
+              </div>
+              <ActiveToggle
+                isActive={syncWithQbank}
+                disabled={disabled}
+                ariaLabel="Sync edits with master question bank"
+                onChange={setSyncWithQbank}
+              />
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-2">
             <label htmlFor="grand-test-custom-question-text" className="text-label-sm font-semibold text-on-surface">
               Question <span className="text-error-red">*</span>
