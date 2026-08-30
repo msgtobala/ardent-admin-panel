@@ -1,6 +1,7 @@
 import { deleteObject, ref, uploadBytes } from 'firebase/storage'
 import { makeStorageAssetPublic } from './make-storage-asset-public'
 import { storage } from './firebase'
+import { parseFirebaseStoragePathFromUrl } from './firebase-storage-url'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -72,22 +73,7 @@ export function buildQbankQuestionImageStoragePath(
 }
 
 export function parseStoragePathFromPublicUrl(publicUrl: string): string | null {
-  const bucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET
-  const trimmedUrl = publicUrl.trim()
-
-  if (!bucket || !trimmedUrl) return null
-
-  try {
-    const url = new URL(trimmedUrl)
-    if (url.hostname !== 'storage.googleapis.com') return null
-
-    const pathSegments = url.pathname.split('/').filter(Boolean)
-    if (pathSegments.length < 2 || pathSegments[0] !== bucket) return null
-
-    return pathSegments.slice(1).join('/')
-  } catch {
-    return null
-  }
+  return parseFirebaseStoragePathFromUrl(publicUrl)
 }
 
 function isStorageObjectNotFound(error: unknown): boolean {

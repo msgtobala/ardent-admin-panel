@@ -9,5 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    env: {
+      VITE_FIREBASE_STORAGE_BUCKET: 'ardent-mds.firebasestorage.app',
+    },
   },
 })

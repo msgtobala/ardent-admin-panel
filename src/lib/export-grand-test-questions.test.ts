@@ -82,11 +82,21 @@ describe('export grand test questions helpers', () => {
     expect(body).toEqual([['1', 'A', 'Because option A is correct.']])
   })
 
-  it('builds a sanitized filename', () => {
-    const filename = buildGrandTestQuestionsFilename(
-      createTest({ title: 'June Grand Test #1' }),
-    )
+  it('builds a lowercase filename with underscores and no special characters', () => {
+    expect(
+      buildGrandTestQuestionsFilename(createTest({ title: 'Grand Test - 1' })),
+    ).toBe('grand_test_1.pdf')
 
-    expect(filename).toMatch(/^grand-test-questions-june-grand-test-1-\d{4}-\d{2}-\d{2}\.pdf$/)
+    expect(
+      buildGrandTestQuestionsFilename(
+        createTest({ title: 'Master Leader Board Test -12' }),
+      ),
+    ).toBe('master_leader_board_test_12.pdf')
+  })
+
+  it('falls back to untitled when the title is empty', () => {
+    const filename = buildGrandTestQuestionsFilename(createTest({ title: '   ' }))
+
+    expect(filename).toBe('untitled.pdf')
   })
 })

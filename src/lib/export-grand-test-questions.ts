@@ -55,20 +55,15 @@ function sanitizeFilenameSegment(value: string): string {
 
   return trimmed
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120)
 }
 
 export function buildGrandTestQuestionsFilename(test: GrandTest): string {
   const titleSegment = sanitizeFilenameSegment(test.title || test.id)
-  const dateSegment = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-
-  return `grand-test-questions-${titleSegment}-${dateSegment}.pdf`
+  return `${titleSegment || 'untitled'}.pdf`
 }
 
 export function buildGrandTestAnswerKeyRows(
